@@ -2,6 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import ServiceCard from "@/components/ServiceCard";
+import { useToast } from "@/hooks/use-toast";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { 
   Play, 
   Users, 
@@ -19,6 +22,31 @@ import {
 import heroImage from "@/assets/hero-image.jpg";
 
 const Home = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleGetStarted = async () => {
+    setIsLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    toast({
+      title: "Welcome! 🚀",
+      description: "Let's get your YouTube channel growing!",
+      duration: 3000,
+    });
+    
+    navigate("/services");
+    setIsLoading(false);
+  };
+
+  const handleViewServices = () => {
+    navigate("/services");
+  };
+
+  const handleLearnMore = () => {
+    navigate("/about");
+  };
   const services = [
     {
       title: "YouTube Views",
@@ -91,11 +119,21 @@ const Home = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="btn-hero text-lg px-8 py-6">
+                <Button 
+                  size="lg" 
+                  className="btn-hero text-lg px-8 py-6"
+                  onClick={handleGetStarted}
+                  disabled={isLoading}
+                >
                   <Play className="mr-2 h-5 w-5" fill="currentColor" />
-                  Start Growing Now
+                  {isLoading ? "Loading..." : "Start Growing Now"}
                 </Button>
-                <Button size="lg" variant="outline" className="text-lg px-8 py-6">
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="text-lg px-8 py-6"
+                  onClick={handleViewServices}
+                >
                   View Services
                 </Button>
               </div>
@@ -174,7 +212,12 @@ const Home = () => {
           </div>
 
           <div className="text-center mt-12">
-            <Button size="lg" variant="outline" className="px-8">
+            <Button 
+              size="lg" 
+              variant="outline" 
+              className="px-8"
+              onClick={handleViewServices}
+            >
               View All Services
             </Button>
           </div>
@@ -194,11 +237,21 @@ const Home = () => {
               Join thousands of creators who've accelerated their growth with our premium services
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="btn-hero text-lg px-8 py-6">
+              <Button 
+                size="lg" 
+                className="btn-hero text-lg px-8 py-6"
+                onClick={handleGetStarted}
+                disabled={isLoading}
+              >
                 <Star className="mr-2 h-5 w-5" fill="currentColor" />
-                Get Started Today
+                {isLoading ? "Loading..." : "Get Started Today"}
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-white/20 text-white hover:bg-white/10">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="text-lg px-8 py-6 border-white/20 text-white hover:bg-white/10"
+                onClick={handleLearnMore}
+              >
                 Learn More
               </Button>
             </div>

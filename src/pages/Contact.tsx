@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import { 
   MessageCircle, 
   Mail, 
@@ -17,6 +18,8 @@ import {
 } from "lucide-react";
 
 const Contact = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -25,10 +28,37 @@ const Contact = () => {
     message: ""
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission here
-    console.log("Form submitted:", formData);
+    setIsSubmitting(true);
+    
+    // Simulate form submission
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    toast({
+      title: "Message Sent Successfully! ✉️",
+      description: "We'll get back to you within 2 hours. Check your email for confirmation.",
+      duration: 5000,
+    });
+    
+    // Reset form
+    setFormData({
+      name: "",
+      email: "",
+      subject: "",
+      category: "",
+      message: ""
+    });
+    
+    setIsSubmitting(false);
+  };
+
+  const handleContactMethod = (method: string) => {
+    toast({
+      title: `${method} Support`,
+      description: "Connect Supabase to enable real-time support features.",
+      duration: 3000,
+    });
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -111,7 +141,12 @@ const Contact = () => {
                           <h3 className="font-semibold text-sm">{method.title}</h3>
                           <p className="text-xs text-muted-foreground mb-2">{method.description}</p>
                           <p className="text-xs text-primary mb-2">{method.available}</p>
-                          <Button size="sm" variant="outline" className="text-xs">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="text-xs"
+                            onClick={() => handleContactMethod(method.title)}
+                          >
                             {method.action}
                           </Button>
                         </div>
@@ -219,8 +254,12 @@ const Contact = () => {
                     />
                   </div>
 
-                  <Button type="submit" className="btn-hero w-full md:w-auto">
-                    Send Message
+                  <Button 
+                    type="submit" 
+                    className="btn-hero w-full md:w-auto"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? "Sending..." : "Send Message"}
                   </Button>
                 </form>
               </CardContent>
@@ -253,7 +292,14 @@ const Contact = () => {
 
           <div className="text-center mt-8">
             <p className="text-muted-foreground mb-4">Can't find what you're looking for?</p>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={() => toast({
+                title: "FAQ Coming Soon! 📚",
+                description: "We're building a comprehensive FAQ section for you.",
+                duration: 3000,
+              })}
+            >
               View Full FAQ
             </Button>
           </div>

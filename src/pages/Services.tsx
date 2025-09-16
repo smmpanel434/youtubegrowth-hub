@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ServiceCard from "@/components/ServiceCard";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { 
   Eye, 
   Users, 
@@ -21,6 +23,17 @@ const Services = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("popular");
   const [category, setCategory] = useState("all");
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const handleCustomQuote = () => {
+    toast({
+      title: "Let's Create Your Custom Package! 📦",
+      description: "Redirecting you to our contact page for personalized assistance.",
+      duration: 3000,
+    });
+    navigate("/contact");
+  };
 
   const allServices = [
     {
@@ -247,6 +260,11 @@ const Services = () => {
               onClick={() => {
                 setSearchTerm("");
                 setCategory("all");
+                toast({
+                  title: "Filters Cleared! ✨",
+                  description: "Showing all services again.",
+                  duration: 2000,
+                });
               }}
             >
               Clear Filters
@@ -262,7 +280,10 @@ const Services = () => {
           <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
             Looking for something specific? Our team can create a custom package tailored to your exact needs and budget.
           </p>
-          <Button className="btn-hero">
+          <Button 
+            className="btn-hero"
+            onClick={handleCustomQuote}
+          >
             Contact Us for Custom Quote
           </Button>
         </div>

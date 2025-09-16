@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { LucideIcon } from "lucide-react";
+import { useState } from "react";
 
 interface ServiceCardProps {
   title: string;
@@ -24,6 +26,23 @@ const ServiceCard = ({
   isPopular = false,
   deliveryTime,
 }: ServiceCardProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleOrderClick = async () => {
+    setIsLoading(true);
+    
+    // Simulate order processing
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    toast({
+      title: "Order Added to Cart! 🛒",
+      description: `${title} - ${price} has been added. Please connect Supabase to complete orders.`,
+      duration: 4000,
+    });
+    
+    setIsLoading(false);
+  };
   return (
     <Card className={`service-card relative ${isPopular ? "ring-2 ring-primary" : ""}`}>
       {isPopular && (
@@ -64,8 +83,12 @@ const ServiceCard = ({
       </CardContent>
 
       <CardFooter>
-        <Button className="w-full btn-hero">
-          Order Now
+        <Button 
+          className="w-full btn-hero" 
+          onClick={handleOrderClick}
+          disabled={isLoading}
+        >
+          {isLoading ? "Processing..." : "Order Now"}
         </Button>
       </CardFooter>
     </Card>

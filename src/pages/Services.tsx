@@ -1,23 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import ServiceCard from "@/components/ServiceCard";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { 
-  Eye, 
-  Users, 
-  Heart, 
-  MessageCircle, 
-  Share2, 
-  Clock,
-  Play,
+  Youtube, 
+  Instagram, 
+  Twitter, 
+  Facebook,
   Search,
-  Filter
+  ShoppingCart,
+  Star,
+  Zap,
+  Shield
 } from "lucide-react";
+import OrderModal from "@/components/OrderModal";
 
 const Services = () => {
   const [searchTerm, setSearchTerm] = useState("");

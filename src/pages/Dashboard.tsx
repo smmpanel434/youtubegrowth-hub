@@ -13,10 +13,15 @@ import {
   MessageSquare, 
   Plus,
   History,
-  LogOut
+  LogOut,
+  TrendingUp,
+  DollarSign,
+  ShoppingCart,
+  AlertCircle
 } from "lucide-react";
 import DepositModal from "@/components/DepositModal";
 import OrderModal from "@/components/OrderModal";
+import SupportTicketModal from "@/components/SupportTicketModal";
 
 interface Order {
   id: string;
@@ -47,6 +52,13 @@ const Dashboard = () => {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [stats, setStats] = useState({
+    totalOrders: 0,
+    pendingOrders: 0,
+    totalSpent: 0,
+    totalDeposits: 0
+  });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -58,8 +70,41 @@ const Dashboard = () => {
     if (user) {
       fetchOrders();
       fetchDeposits();
+      calculateStats();
     }
   }, [user]);
+
+  const calculateStats = async () => {
+    if (!user) return;
+
+    // Get orders stats
+    const { data: ordersData } = await supabase
+      .from('orders')
+      .select('total_amount, status')
+      .eq('user_id', user.id);
+
+    // Get deposits stats  
+    const { data: depositsData } = await supabase
+      .from('deposits')
+      .select('amount, status')
+      .eq('user_id', user.id);
+
+    if (ordersData && depositsData) {
+      const totalOrders = ordersData.length;
+      const pendingOrders = ordersData.filter(o => o.status === 'pending').length;
+      const totalSpent = ordersData.reduce((sum, o) => sum + Number(o.total_amount), 0);
+      const totalDeposits = depositsData
+        .filter(d => d.status === 'completed')
+        .reduce((sum, d) => sum + Number(d.amount), 0);
+
+      setStats({
+        totalOrders,
+        pendingOrders,
+        totalSpent,
+        totalDeposits
+      });
+    }
+  };
 
   const fetchOrders = async () => {
     const { data } = await supabase
@@ -140,33 +185,70 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Balance Card */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Account Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-3xl font-bold text-primary">${profile.balance}</p>
-                <p className="text-muted-foreground">Available funds</p>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={() => setShowDepositModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Funds
-                </Button>
-                <Button onClick={() => setShowOrderModal(true)} variant="outline">
-                  <Package className="h-4 w-4 mr-2" />
-                  New Order
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Account Balance</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">${profile.balance}</div>
+              <p className="text-xs text-muted-foreground">Available funds</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalOrders}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.pendingOrders} pending
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${stats.totalSpent.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">All time</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Deposits</CardTitle>
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${stats.totalDeposits.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">Completed deposits</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-4 mb-8">
+          <Button onClick={() => setShowDepositModal(true)} className="flex-1">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Funds
+          </Button>
+          <Button onClick={() => setShowOrderModal(true)} variant="outline" className="flex-1">
+            <Package className="h-4 w-4 mr-2" />
+            New Order
+          </Button>
+          <Button onClick={() => setShowSupportModal(true)} variant="outline" className="flex-1">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Support
+          </Button>
+        </div>
 
         {/* Tabs */}
         <Tabs defaultValue="orders" className="w-full">
@@ -242,12 +324,29 @@ const Dashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Support Center</CardTitle>
-                <CardDescription>Get help with your account</CardDescription>
+                <CardDescription>Get help with payments, orders, or services</CardDescription>
               </CardHeader>
-              <CardContent>
-                <Button className="w-full" onClick={() => navigate("/support")}>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 border rounded-lg text-center">
+                    <AlertCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <h3 className="font-medium mb-1">Payment Issues</h3>
+                    <p className="text-sm text-muted-foreground">Problems with deposits or billing</p>
+                  </div>
+                  <div className="p-4 border rounded-lg text-center">
+                    <Package className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <h3 className="font-medium mb-1">Order Problems</h3>
+                    <p className="text-sm text-muted-foreground">Issues with service delivery</p>
+                  </div>
+                  <div className="p-4 border rounded-lg text-center">
+                    <MessageSquare className="h-8 w-8 mx-auto mb-2 text-primary" />
+                    <h3 className="font-medium mb-1">General Support</h3>
+                    <p className="text-sm text-muted-foreground">Questions about our services</p>
+                  </div>
+                </div>
+                <Button className="w-full" onClick={() => setShowSupportModal(true)}>
                   <MessageSquare className="h-4 w-4 mr-2" />
-                  Contact Support
+                  Create Support Ticket
                 </Button>
               </CardContent>
             </Card>
@@ -271,8 +370,17 @@ const Dashboard = () => {
         onSuccess={() => {
           setShowOrderModal(false);
           fetchOrders();
+          calculateStats();
           // Refresh profile to get updated balance
           window.location.reload();
+        }}
+      />
+      
+      <SupportTicketModal 
+        open={showSupportModal} 
+        onClose={() => setShowSupportModal(false)}
+        onSuccess={() => {
+          setShowSupportModal(false);
         }}
       />
     </div>

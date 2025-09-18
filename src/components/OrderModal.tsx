@@ -60,10 +60,10 @@ const OrderModal = ({ open, onClose, onSuccess }: OrderModalProps) => {
     const qty = parseInt(quantity);
     const total = calculateTotal();
 
-    if (qty < 100) {
+    if (qty < 1000) {
       toast({
         title: "Invalid quantity",
-        description: "Minimum order quantity is 100",
+        description: "Minimum order quantity is 1000",
         variant: "destructive"
       });
       return;
@@ -185,15 +185,15 @@ const OrderModal = ({ open, onClose, onSuccess }: OrderModalProps) => {
             <Input
               id="quantity"
               type="number"
-              min="100"
-              step="100"
-              placeholder="Minimum 100"
+              min="1000"
+              step="1000"
+              placeholder="Minimum 1000"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               required
             />
             <p className="text-xs text-muted-foreground">
-              Minimum order: 100 units
+              Minimum order: 1000 units
             </p>
           </div>
 

@@ -1,19 +1,21 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { LucideIcon } from "lucide-react";
 import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Clock, Star } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import OrderModal from "./OrderModal";
 
 interface ServiceCardProps {
   title: string;
   description: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<any>;
   price: string;
   originalPrice?: string;
   features: string[];
   isPopular?: boolean;
   deliveryTime: string;
+  category: string;
 }
 
 const ServiceCard = ({
@@ -23,75 +25,93 @@ const ServiceCard = ({
   price,
   originalPrice,
   features,
-  isPopular = false,
+  isPopular,
   deliveryTime,
+  category,
 }: ServiceCardProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const { user } = useAuth();
 
-  const handleOrderClick = async () => {
-    setIsLoading(true);
-    
-    // Simulate order processing
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({
-      title: "Order Added to Cart! 🛒",
-      description: `${title} - ${price} has been added. Please connect Supabase to complete orders.`,
-      duration: 4000,
-    });
-    
-    setIsLoading(false);
+  const handleOrder = () => {
+    if (!user) {
+      // Redirect to auth page or show login modal
+      return;
+    }
+    setShowOrderModal(true);
   };
+
   return (
-    <Card className={`service-card relative ${isPopular ? "ring-2 ring-primary" : ""}`}>
-      {isPopular && (
-        <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground">
-          Most Popular
-        </Badge>
-      )}
-      
-      <CardHeader className="text-center pb-4">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-          <Icon className="h-8 w-8 text-primary" />
-        </div>
-        <CardTitle className="text-xl font-bold">{title}</CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          {description}
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        <div className="text-center">
-          <div className="flex items-baseline justify-center space-x-2">
-            <span className="text-3xl font-bold text-foreground">{price}</span>
-            {originalPrice && (
-              <span className="text-lg text-muted-foreground line-through">{originalPrice}</span>
-            )}
+    <>
+      <Card className={`relative h-full transition-all duration-300 hover:shadow-lg ${isPopular ? 'ring-2 ring-primary' : ''}`}>
+        {isPopular && (
+          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+            <Badge className="bg-primary text-primary-foreground">
+              <Star className="h-3 w-3 mr-1" />
+              Most Popular
+            </Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">Delivery: {deliveryTime}</p>
-        </div>
+        )}
+        
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between mb-2">
+            <Icon className="h-6 w-6 text-primary" />
+            <Badge variant="secondary" className="text-xs">
+              {category}
+            </Badge>
+          </div>
+          <CardTitle className="text-lg">{title}</CardTitle>
+          <CardDescription className="text-sm">{description}</CardDescription>
+        </CardHeader>
 
-        <ul className="space-y-2">
-          {features.map((feature, index) => (
-            <li key={index} className="flex items-center text-sm">
-              <div className="w-1.5 h-1.5 bg-primary rounded-full mr-2 flex-shrink-0" />
-              {feature}
-            </li>
-          ))}
-        </ul>
-      </CardContent>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              Delivery: {deliveryTime}
+            </span>
+          </div>
 
-      <CardFooter>
-        <Button 
-          className="w-full btn-hero" 
-          onClick={handleOrderClick}
-          disabled={isLoading}
-        >
-          {isLoading ? "Processing..." : "Order Now"}
-        </Button>
-      </CardFooter>
-    </Card>
+          <div className="space-y-2">
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-center text-sm">
+                <div className="h-1.5 w-1.5 bg-primary rounded-full mr-2" />
+                {feature}
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-4 border-t">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold text-primary">{price}</span>
+                {originalPrice && (
+                  <span className="text-sm text-muted-foreground line-through">
+                    {originalPrice}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            <Button 
+              onClick={handleOrder}
+              className="w-full"
+              disabled={!user}
+            >
+              {user ? 'Order Now' : 'Login to Order'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <OrderModal
+        open={showOrderModal}
+        onClose={() => setShowOrderModal(false)}
+        onSuccess={() => {
+          setShowOrderModal(false);
+          // Could add a toast or callback here
+        }}
+      />
+    </>
   );
 };
 

@@ -57,6 +57,7 @@ const Home = () => {
       features: ["Real viewers", "Instant start", "24/7 support", "Money-back guarantee"],
       isPopular: true,
       deliveryTime: "0-1 hours",
+      category: "views",
     },
     {
       title: "YouTube Subscribers",
@@ -65,6 +66,7 @@ const Home = () => {
       price: "$8.99",
       features: ["Real subscribers", "Gradual delivery", "Lifetime guarantee", "Safe & secure"],
       deliveryTime: "1-3 days",
+      category: "subscribers",
     },
     {
       title: "YouTube Likes",
@@ -73,6 +75,7 @@ const Home = () => {
       price: "$1.99",
       features: ["High-quality likes", "Fast delivery", "Natural growth", "No password needed"],
       deliveryTime: "0-6 hours",
+      category: "engagement",
     },
   ];
 

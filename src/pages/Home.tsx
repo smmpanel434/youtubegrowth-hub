@@ -28,15 +28,15 @@ const Home = () => {
 
   const handleGetStarted = async () => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     toast({
       title: "Welcome! 🚀",
-      description: "Let's get your YouTube channel growing!",
+      description: "Create your account to get started!",
       duration: 3000,
     });
     
-    navigate("/services");
+    navigate("/auth");
     setIsLoading(false);
   };
 

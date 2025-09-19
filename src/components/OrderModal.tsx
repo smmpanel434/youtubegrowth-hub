@@ -38,13 +38,22 @@ const OrderModal = ({ open, onClose, onSuccess }: OrderModalProps) => {
   }, [open]);
 
   const fetchServices = async () => {
-    const { data } = await supabase
-      .from('services')
-      .select('*')
-      .eq('is_active', true)
-      .order('name');
-    
-    if (data) setServices(data);
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (error) {
+        console.error('Error fetching services:', error);
+        return;
+      }
+      
+      if (data) setServices(data);
+    } catch (error) {
+      console.error('Unexpected error fetching services:', error);
+    }
   };
 
   const calculateTotal = () => {

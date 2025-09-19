@@ -77,56 +77,92 @@ const Dashboard = () => {
   const calculateStats = async () => {
     if (!user) return;
 
-    // Get orders stats
-    const { data: ordersData } = await supabase
-      .from('orders')
-      .select('total_amount, status')
-      .eq('user_id', user.id);
+    try {
+      // Get orders stats
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('total_amount, status')
+        .eq('user_id', user.id);
 
-    // Get deposits stats  
-    const { data: depositsData } = await supabase
-      .from('deposits')
-      .select('amount, status')
-      .eq('user_id', user.id);
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
+        return;
+      }
 
-    if (ordersData && depositsData) {
-      const totalOrders = ordersData.length;
-      const pendingOrders = ordersData.filter(o => o.status === 'pending').length;
-      const totalSpent = ordersData.reduce((sum, o) => sum + Number(o.total_amount), 0);
-      const totalDeposits = depositsData
-        .filter(d => d.status === 'completed')
-        .reduce((sum, d) => sum + Number(d.amount), 0);
+      // Get deposits stats  
+      const { data: depositsData, error: depositsError } = await supabase
+        .from('deposits')
+        .select('amount, status')
+        .eq('user_id', user.id);
 
-      setStats({
-        totalOrders,
-        pendingOrders,
-        totalSpent,
-        totalDeposits
-      });
+      if (depositsError) {
+        console.error('Error fetching deposits:', depositsError);
+        return;
+      }
+
+      if (ordersData && depositsData) {
+        const totalOrders = ordersData.length;
+        const pendingOrders = ordersData.filter(o => o.status === 'pending').length;
+        const totalSpent = ordersData.reduce((sum, o) => sum + Number(o.total_amount), 0);
+        const totalDeposits = depositsData
+          .filter(d => d.status === 'completed')
+          .reduce((sum, d) => sum + Number(d.amount), 0);
+
+        setStats({
+          totalOrders,
+          pendingOrders,
+          totalSpent,
+          totalDeposits
+        });
+      }
+    } catch (error) {
+      console.error('Error calculating stats:', error);
     }
   };
 
   const fetchOrders = async () => {
-    const { data } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        services (name)
-      `)
-      .eq('user_id', user?.id)
-      .order('created_at', { ascending: false });
+    if (!user) return;
     
-    if (data) setOrders(data);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          services (name)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching orders:', error);
+        return;
+      }
+      
+      if (data) setOrders(data);
+    } catch (error) {
+      console.error('Unexpected error fetching orders:', error);
+    }
   };
 
   const fetchDeposits = async () => {
-    const { data } = await supabase
-      .from('deposits')
-      .select('*')
-      .eq('user_id', user?.id)
-      .order('created_at', { ascending: false });
+    if (!user) return;
     
-    if (data) setDeposits(data);
+    try {
+      const { data, error } = await supabase
+        .from('deposits')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching deposits:', error);
+        return;
+      }
+      
+      if (data) setDeposits(data);
+    } catch (error) {
+      console.error('Unexpected error fetching deposits:', error);
+    }
   };
 
   const handleSignOut = async () => {

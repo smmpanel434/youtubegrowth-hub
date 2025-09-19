@@ -1,51 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Users, 
-  Package, 
-  CreditCard, 
-  MessageSquare,
-  ArrowLeft,
-  Plus
-} from "lucide-react";
-
-interface User {
-  id: string;
-  user_id: string;
-  email: string;
-  full_name: string | null;
-  balance: number;
-  is_admin: boolean;
-  created_at: string;
-}
-
-interface Order {
-  id: string;
-  user_id: string;
-  quantity: number;
-  link: string;
-  total_amount: number;
-  status: string;
-  created_at: string;
-  profiles: {
-    email: string;
-    full_name: string | null;
-  };
-  services: {
-    name: string;
-  };
-}
+import { LogOut, CheckCircle, XCircle } from "lucide-react";
 
 interface Deposit {
   id: string;
@@ -56,501 +17,352 @@ interface Deposit {
   created_at: string;
   profiles: {
     email: string;
-    full_name: string | null;
+    full_name: string;
+  };
+}
+
+interface Order {
+  id: string;
+  user_id: string;
+  service_id: string;
+  quantity: number;
+  total_amount: number;
+  link: string;
+  status: string;
+  created_at: string;
+  profiles: {
+    email: string;
+    full_name: string;
+  };
+  services: {
+    name: string;
+  };
+}
+
+interface SupportTicket {
+  id: string;
+  user_id: string;
+  subject: string;
+  message: string;
+  status: string;
+  priority: string;
+  created_at: string;
+  profiles: {
+    email: string;
+    full_name: string;
   };
 }
 
 const Admin = () => {
-  const { profile, loading } = useAuth();
+  const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [deposits, setDeposits] = useState<Deposit[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [addAmount, setAddAmount] = useState("");
-  const [showAddFunds, setShowAddFunds] = useState(false);
 
   useEffect(() => {
-    if (!loading && (!profile || !profile.is_admin)) {
-      navigate("/dashboard");
-      toast({
-        title: "Access denied",
-        description: "You don't have admin privileges",
-        variant: "destructive"
-      });
-    }
-  }, [profile, loading, navigate, toast]);
+    fetchData();
+  }, []);
 
-  useEffect(() => {
-    if (profile?.is_admin) {
-      fetchUsers();
-      fetchOrders();
-      fetchDeposits();
-    }
-  }, [profile]);
+  const fetchData = async () => {
+    try {
+      // Fetch deposits with user profiles
+      const { data: depositsData, error: depositsError } = await supabase
+        .from('deposits')
+        .select(`
+          *,
+          profiles!deposits_user_id_fkey (email, full_name)
+        `)
+        .order('created_at', { ascending: false });
 
-  const fetchUsers = async () => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (data) setUsers(data);
-  };
+      if (depositsError) throw depositsError;
 
-  const fetchOrders = async () => {
-    const { data } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        profiles (email, full_name),
-        services (name)
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (data) setOrders(data);
-  };
+      // Fetch orders with user profiles and services
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          profiles!orders_user_id_fkey (email, full_name),
+          services (name)
+        `)
+        .order('created_at', { ascending: false });
 
-  const fetchDeposits = async () => {
-    const { data } = await supabase
-      .from('deposits')
-      .select(`
-        *,
-        profiles (email, full_name)
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (data) setDeposits(data);
-  };
+      if (ordersError) throw ordersError;
 
-  const updateOrderStatus = async (orderId: string, status: string) => {
-    const { error } = await supabase
-      .from('orders')
-      .update({ status })
-      .eq('id', orderId);
+      // Fetch support tickets with user profiles
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from('support_tickets')
+        .select(`
+          *,
+          profiles!support_tickets_user_id_fkey (email, full_name)
+        `)
+        .order('created_at', { ascending: false });
 
-    if (error) {
+      if (ticketsError) throw ticketsError;
+
+      setDeposits(depositsData || []);
+      setOrders(ordersData || []);
+      setTickets(ticketsData || []);
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Success",
-        description: "Order status updated",
-      });
-      fetchOrders();
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateDepositStatus = async (depositId: string, status: string) => {
-    const deposit = deposits.find(d => d.id === depositId);
-    if (!deposit) return;
+  const handleApproveDeposit = async (depositId: string, amount: number, userId: string) => {
+    try {
+      // Update deposit status to approved
+      const { error: depositError } = await supabase
+        .from('deposits')
+        .update({ status: 'approved' })
+        .eq('id', depositId);
 
-    const { error } = await supabase
-      .from('deposits')
-      .update({ status })
-      .eq('id', depositId);
+      if (depositError) throw depositError;
 
-    if (error) {
+      // Get current user balance
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('balance')
+        .eq('user_id', userId)
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Update user balance
+      const { error: balanceError } = await supabase
+        .from('profiles')
+        .update({ 
+          balance: (profileData.balance || 0) + amount 
+        })
+        .eq('user_id', userId);
+
+      if (balanceError) throw balanceError;
+
+      toast({
+        title: "Deposit approved",
+        description: `$${amount} has been added to user's account.`,
+      });
+
+      fetchData(); // Refresh data
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
-      return;
     }
-
-    // If approved, add funds to user balance
-    if (status === 'completed') {
-      const user = users.find(u => u.user_id === deposit.user_id);
-      if (user) {
-        const { error: balanceError } = await supabase
-          .from('profiles')
-          .update({ 
-            balance: user.balance + deposit.amount 
-          })
-          .eq('user_id', deposit.user_id);
-
-        if (balanceError) {
-          toast({
-            title: "Error updating balance",
-            description: balanceError.message,
-            variant: "destructive"
-          });
-          return;
-        }
-      }
-    }
-
-    toast({
-      title: "Success",
-      description: `Deposit ${status === 'completed' ? 'approved and funds added' : 'status updated'}`,
-    });
-    
-    fetchDeposits();
-    fetchUsers();
   };
 
-  const addFundsToUser = async () => {
-    if (!selectedUser || !addAmount) return;
+  const handleRejectDeposit = async (depositId: string) => {
+    try {
+      const { error } = await supabase
+        .from('deposits')
+        .update({ status: 'rejected' })
+        .eq('id', depositId);
 
-    const amount = parseFloat(addAmount);
-    if (amount <= 0) {
+      if (error) throw error;
+
       toast({
-        title: "Invalid amount",
-        description: "Amount must be greater than 0",
-        variant: "destructive"
+        title: "Deposit rejected",
+        description: "Deposit has been rejected.",
       });
-      return;
-    }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        balance: selectedUser.balance + amount 
-      })
-      .eq('user_id', selectedUser.user_id);
-
-    if (error) {
+      fetchData(); // Refresh data
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
-    } else {
-      toast({
-        title: "Success",
-        description: `Added $${amount} to ${selectedUser.email}'s account`,
-      });
-      setShowAddFunds(false);
-      setAddAmount("");
-      setSelectedUser(null);
-      fetchUsers();
     }
+  };
+
+  const handleLogout = () => {
+    navigate("/");
   };
 
   const getStatusBadge = (status: string) => {
-    const statusColors = {
-      pending: "bg-yellow-500",
-      processing: "bg-blue-500", 
-      completed: "bg-green-500",
-      cancelled: "bg-red-500",
-      failed: "bg-red-500"
+    const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
+      pending: "secondary",
+      approved: "default",
+      rejected: "destructive",
+      completed: "default",
+      processing: "secondary",
+      open: "secondary",
+      closed: "default"
     };
     
-    return (
-      <Badge className={`${statusColors[status as keyof typeof statusColors]} text-white`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    );
+    return <Badge variant={statusColors[status] || "secondary"}>{status}</Badge>;
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-lg">Loading admin panel...</p>
+        </div>
       </div>
     );
   }
 
-  if (!profile?.is_admin) return null;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
+    <div className="min-h-screen bg-gradient-to-br from-primary/20 to-secondary/20">
       <div className="container mx-auto p-6">
-        <div className="flex items-center gap-4 mb-8">
-          <Button onClick={() => navigate("/dashboard")} variant="ghost" size="sm">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
+        <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold">Admin Panel</h1>
-            <p className="text-muted-foreground">Manage users, orders, and deposits</p>
+            <p className="text-muted-foreground">Manage deposits, orders, and support tickets</p>
           </div>
+          <Button onClick={handleLogout} variant="outline">
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{orders.length}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Deposits</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {deposits.filter(d => d.status === 'pending').length}
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                ${orders.filter(o => o.status === 'completed').reduce((sum, o) => sum + o.total_amount, 0).toFixed(2)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="users" className="w-full">
+        <Tabs defaultValue="deposits" className="space-y-4">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="deposits">Deposits</TabsTrigger>
+            <TabsTrigger value="deposits">
+              Deposits ({deposits.filter(d => d.status === 'pending').length})
+            </TabsTrigger>
+            <TabsTrigger value="orders">Orders ({orders.length})</TabsTrigger>
+            <TabsTrigger value="tickets">
+              Support ({tickets.filter(t => t.status === 'open').length})
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="users">
+          <TabsContent value="deposits" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage user accounts and balances</CardDescription>
+                <CardTitle>Deposit Requests</CardTitle>
+                <CardDescription>
+                  Review and approve/reject deposit requests
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Balance</TableHead>
-                      <TableHead>Admin</TableHead>
-                      <TableHead>Registered</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{user.full_name || user.email}</p>
-                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>${user.balance}</TableCell>
-                        <TableCell>
-                          {user.is_admin ? (
-                            <Badge className="bg-blue-500 text-white">Admin</Badge>
-                          ) : (
-                            <Badge variant="secondary">User</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(user.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
+                <div className="space-y-4">
+                  {deposits.map((deposit) => (
+                    <div key={deposit.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{deposit.profiles?.full_name || deposit.profiles?.email}</span>
+                          {getStatusBadge(deposit.status)}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          ${deposit.amount} • {deposit.payment_method} • {new Date(deposit.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {deposit.status === 'pending' && (
+                        <div className="flex gap-2">
                           <Button
                             size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowAddFunds(true);
-                            }}
+                            onClick={() => handleApproveDeposit(deposit.id, deposit.amount, deposit.user_id)}
                           >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Add Funds
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Approve
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleRejectDeposit(deposit.id)}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {deposits.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No deposit requests found.
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="orders">
+          <TabsContent value="orders" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Order Management</CardTitle>
-                <CardDescription>View and manage customer orders</CardDescription>
+                <CardTitle>Orders</CardTitle>
+                <CardDescription>View all customer orders</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Service</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{order.profiles.full_name || order.profiles.email}</p>
-                            <p className="text-sm text-muted-foreground">{order.profiles.email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>{order.services.name}</TableCell>
-                        <TableCell>{order.quantity.toLocaleString()}</TableCell>
-                        <TableCell>${order.total_amount}</TableCell>
-                        <TableCell>{getStatusBadge(order.status)}</TableCell>
-                        <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {order.status === 'pending' && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => updateOrderStatus(order.id, 'processing')}
-                                >
-                                  Start
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => updateOrderStatus(order.id, 'cancelled')}
-                                >
-                                  Cancel
-                                </Button>
-                              </>
-                            )}
-                            {order.status === 'processing' && (
-                              <Button
-                                size="sm"
-                                onClick={() => updateOrderStatus(order.id, 'completed')}
-                              >
-                                Complete
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-4">
+                  {orders.map((order) => (
+                    <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{order.profiles?.full_name || order.profiles?.email}</span>
+                          {getStatusBadge(order.status)}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {order.services?.name} • {order.quantity} units • ${order.total_amount}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {order.link} • {new Date(order.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {orders.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No orders found.
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="deposits">
+          <TabsContent value="tickets" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Deposit Management</CardTitle>
-                <CardDescription>Review and approve deposit requests</CardDescription>
+                <CardTitle>Support Tickets</CardTitle>
+                <CardDescription>Customer support requests</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {deposits.map((deposit) => (
-                      <TableRow key={deposit.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{deposit.profiles.full_name || deposit.profiles.email}</p>
-                            <p className="text-sm text-muted-foreground">{deposit.profiles.email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>${deposit.amount}</TableCell>
-                        <TableCell className="capitalize">
-                          {deposit.payment_method.replace('_', ' ')}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(deposit.status)}</TableCell>
-                        <TableCell>{new Date(deposit.created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          {deposit.status === 'pending' && (
-                            <div className="flex gap-1">
-                              <Button
-                                size="sm"
-                                onClick={() => updateDepositStatus(deposit.id, 'completed')}
-                              >
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => updateDepositStatus(deposit.id, 'failed')}
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-4">
+                  {tickets.map((ticket) => (
+                    <div key={ticket.id} className="p-4 border rounded-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{ticket.profiles?.full_name || ticket.profiles?.email}</span>
+                          {getStatusBadge(ticket.status)}
+                          <Badge variant="outline">{ticket.priority}</Badge>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(ticket.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium">{ticket.subject}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{ticket.message}</p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {tickets.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      No support tickets found.
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Add Funds Dialog */}
-      <Dialog open={showAddFunds} onOpenChange={setShowAddFunds}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Funds</DialogTitle>
-            <DialogDescription>
-              Add funds to {selectedUser?.email}'s account
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="amount">Amount (USD)</Label>
-              <Input
-                id="amount"
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="Enter amount"
-                value={addAmount}
-                onChange={(e) => setAddAmount(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowAddFunds(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button onClick={addFundsToUser} className="flex-1">
-                Add Funds
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

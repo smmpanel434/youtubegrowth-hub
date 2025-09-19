@@ -57,7 +57,7 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
       toast({
         title: "Deposit request created",
         description: paymentMethod === 'crypto' 
-          ? "Please send Bitcoin to the provided address. Your account will be credited once confirmed."
+          ? "Please send Bitcoin to the provided address. Your account will be credited within 30 minutes after admin confirmation."
           : "Your deposit request has been submitted and will be processed shortly.",
       });
 
@@ -167,7 +167,7 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Your account will be credited once the transaction is confirmed on the blockchain.
+                  Send the exact amount to this address. Your account will be credited within 30 minutes after admin confirmation of the blockchain transaction.
                 </p>
               </CardContent>
             </Card>
@@ -176,8 +176,8 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
           {paymentMethod === 'card' && (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">
-                  You will be redirected to our secure payment processor to complete your card payment.
+                <p className="text-sm text-destructive font-medium">
+                  Credit card payments are temporarily unavailable in your region. Please use Bitcoin for deposits.
                 </p>
               </CardContent>
             </Card>
@@ -186,8 +186,8 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
           {paymentMethod === 'bank_transfer' && (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">
-                  Bank transfer instructions will be provided after submitting your request.
+                <p className="text-sm text-destructive font-medium">
+                  Bank transfer is temporarily unavailable in your region. Please use Bitcoin for deposits.
                 </p>
               </CardContent>
             </Card>
@@ -197,8 +197,13 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !amount} className="flex-1">
-              {loading ? "Processing..." : "Create Deposit Request"}
+            <Button 
+              type="submit" 
+              disabled={loading || !amount || (paymentMethod !== 'crypto')} 
+              className="flex-1"
+            >
+              {loading ? "Processing..." : 
+               paymentMethod === 'crypto' ? "Create Deposit Request" : "Unavailable in Region"}
             </Button>
           </div>
         </form>

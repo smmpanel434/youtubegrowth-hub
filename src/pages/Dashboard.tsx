@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -17,7 +20,10 @@ import {
   TrendingUp,
   DollarSign,
   ShoppingCart,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  Send,
+  Eye
 } from "lucide-react";
 import DepositModal from "@/components/DepositModal";
 import OrderModal from "@/components/OrderModal";
@@ -44,15 +50,40 @@ interface Deposit {
   created_at: string;
 }
 
+interface SupportTicket {
+  id: string;
+  subject: string;
+  message: string;
+  status: string;
+  priority: string;
+  created_at: string;
+}
+
+interface TicketReply {
+  id: string;
+  ticket_id: string;
+  user_id: string | null;
+  admin_id: string | null;
+  message: string;
+  is_admin_reply: boolean;
+  created_at: string;
+}
+
 const Dashboard = () => {
   const { user, profile, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [ticketReplies, setTicketReplies] = useState<Record<string, TicketReply[]>>({});
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
@@ -71,6 +102,7 @@ const Dashboard = () => {
       fetchOrders();
       fetchDeposits();
       calculateStats();
+      fetchTickets();
     }
   }, [user]);
 
@@ -165,6 +197,115 @@ const Dashboard = () => {
     }
   };
 
+  const fetchTickets = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching tickets:', error);
+        return;
+      }
+      
+      if (data) setTickets(data);
+    } catch (error) {
+      console.error('Unexpected error fetching tickets:', error);
+    }
+  };
+
+  const fetchTicketReplies = async (ticketId: string) => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('ticket_replies')
+        .select('*')
+        .eq('ticket_id', ticketId)
+        .order('created_at', { ascending: true });
+      
+      if (error) {
+        console.error('Error fetching ticket replies:', error);
+        return;
+      }
+      
+      setTicketReplies(prev => ({
+        ...prev,
+        [ticketId]: data || []
+      }));
+    } catch (error) {
+      console.error('Unexpected error fetching ticket replies:', error);
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!selectedTicket || !replyMessage.trim() || !user) return;
+
+    try {
+      const { error } = await supabase
+        .from('ticket_replies')
+        .insert({
+          ticket_id: selectedTicket.id,
+          user_id: user.id,
+          message: replyMessage,
+          is_admin_reply: false
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Reply sent",
+        description: "Your reply has been sent to support.",
+      });
+
+      setReplyMessage("");
+      fetchTicketReplies(selectedTicket.id);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openTicketDialog = (ticket: SupportTicket) => {
+    setSelectedTicket(ticket);
+    setIsTicketDialogOpen(true);
+    fetchTicketReplies(ticket.id);
+  };
+
+  const handleRefresh = async () => {
+    if (!user) return;
+    
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchOrders(),
+        fetchDeposits(),
+        fetchTickets(),
+        calculateStats()
+      ]);
+      
+      toast({
+        title: "Refreshed",
+        description: "Data has been updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to refresh data.",
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
@@ -187,14 +328,19 @@ const Dashboard = () => {
   const getStatusBadge = (status: string) => {
     const statusColors = {
       pending: "bg-yellow-500",
+      active: "bg-blue-500", 
       processing: "bg-blue-500",
       completed: "bg-green-500",
+      approved: "bg-green-500",
       cancelled: "bg-red-500",
-      failed: "bg-red-500"
+      rejected: "bg-red-500",
+      failed: "bg-red-500",
+      open: "bg-yellow-500",
+      closed: "bg-gray-500"
     };
     
     return (
-      <Badge className={`${statusColors[status as keyof typeof statusColors]} text-white`}>
+      <Badge className={`${statusColors[status as keyof typeof statusColors] || 'bg-gray-500'} text-white`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
@@ -284,6 +430,10 @@ const Dashboard = () => {
             <MessageSquare className="h-4 w-4 mr-2" />
             Support
           </Button>
+          <Button onClick={handleRefresh} variant="ghost" disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
 
         {/* Tabs */}
@@ -359,33 +509,130 @@ const Dashboard = () => {
           <TabsContent value="support">
             <Card>
               <CardHeader>
-                <CardTitle>Support Center</CardTitle>
-                <CardDescription>Get help with payments, orders, or services</CardDescription>
+                <CardTitle>Support Tickets</CardTitle>
+                <CardDescription>View and manage your support requests</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 border rounded-lg text-center">
-                    <AlertCircle className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <h3 className="font-medium mb-1">Payment Issues</h3>
-                    <p className="text-sm text-muted-foreground">Problems with deposits or billing</p>
+              <CardContent>
+                {tickets.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">No support tickets yet</p>
+                    <Button onClick={() => setShowSupportModal(true)}>
+                      Create Support Ticket
+                    </Button>
                   </div>
-                  <div className="p-4 border rounded-lg text-center">
-                    <Package className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <h3 className="font-medium mb-1">Order Problems</h3>
-                    <p className="text-sm text-muted-foreground">Issues with service delivery</p>
+                ) : (
+                  <div className="space-y-4">
+                    {tickets.map((ticket) => (
+                      <div key={ticket.id} className="p-4 border rounded-lg space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{ticket.subject}</span>
+                            {getStatusBadge(ticket.status)}
+                            <Badge variant="outline">{ticket.priority}</Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(ticket.created_at).toLocaleDateString()}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openTicketDialog(ticket)}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{ticket.message}</p>
+                      </div>
+                    ))}
+                    
+                    <Button 
+                      className="w-full mt-4" 
+                      onClick={() => setShowSupportModal(true)}
+                      variant="outline"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create New Ticket
+                    </Button>
                   </div>
-                  <div className="p-4 border rounded-lg text-center">
-                    <MessageSquare className="h-8 w-8 mx-auto mb-2 text-primary" />
-                    <h3 className="font-medium mb-1">General Support</h3>
-                    <p className="text-sm text-muted-foreground">Questions about our services</p>
-                  </div>
-                </div>
-                <Button className="w-full" onClick={() => setShowSupportModal(true)}>
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Create Support Ticket
-                </Button>
+                )}
               </CardContent>
             </Card>
+
+            {/* Ticket Conversation Dialog */}
+            <Dialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen}>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    Support Ticket: {selectedTicket?.subject}
+                  </DialogTitle>
+                </DialogHeader>
+                
+                {selectedTicket && (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(selectedTicket.status)}
+                          <Badge variant="outline">{selectedTicket.priority}</Badge>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(selectedTicket.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm">{selectedTicket.message}</p>
+                    </div>
+
+                    {/* Replies */}
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                      {ticketReplies[selectedTicket.id]?.map((reply) => (
+                        <div 
+                          key={reply.id} 
+                          className={`p-3 rounded-lg ${reply.is_admin_reply ? 'bg-primary/10 ml-8' : 'bg-muted mr-8'}`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium">
+                              {reply.is_admin_reply ? 'Support Team' : 'You'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(reply.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-sm">{reply.message}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Reply Form - Only show if ticket is open */}
+                    {selectedTicket.status === 'open' && (
+                      <div className="space-y-3">
+                        <Textarea
+                          placeholder="Type your reply..."
+                          value={replyMessage}
+                          onChange={(e) => setReplyMessage(e.target.value)}
+                          rows={3}
+                        />
+                        <div className="flex justify-end">
+                          <Button onClick={handleSendReply} disabled={!replyMessage.trim()}>
+                            <Send className="h-4 w-4 mr-1" />
+                            Send Reply
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedTicket.status === 'closed' && (
+                      <div className="text-center text-muted-foreground py-4">
+                        This ticket has been closed. Create a new ticket if you need further assistance.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </div>

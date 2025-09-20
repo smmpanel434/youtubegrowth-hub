@@ -18,9 +18,6 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load captcha on component mount
-    loadCaptchaEnginge(6);
-    
     // Check if user is already authenticated
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -30,6 +27,19 @@ const Auth = () => {
     };
     checkAuth();
   }, [navigate]);
+
+  // Load captcha after component mounts and DOM is ready
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        loadCaptchaEnginge(6);
+      } catch (error) {
+        console.error("Failed to load captcha:", error);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();

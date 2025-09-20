@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   MessageCircle, 
   Mail, 
@@ -20,6 +23,8 @@ import {
 const Contact = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -28,37 +33,106 @@ const Contact = () => {
     message: ""
   });
 
+  const createSupportTicket = async (ticketData: {
+    subject: string;
+    message: string;
+    priority: string;
+    category?: string;
+  }) => {
+    if (!user) {
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to create a support ticket.",
+        variant: "destructive"
+      });
+      navigate("/auth");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('support_tickets')
+        .insert({
+          user_id: user.id,
+          subject: ticketData.subject,
+          message: ticketData.message,
+          priority: ticketData.priority,
+          status: 'open'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Support ticket created!",
+        description: "We'll get back to you within 2 hours.",
+      });
+
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create support ticket",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    toast({
-      title: "Message Sent Successfully! ✉️",
-      description: "We'll get back to you within 2 hours. Check your email for confirmation.",
-      duration: 5000,
+    const success = await createSupportTicket({
+      subject: formData.subject,
+      message: `Name: ${formData.name}\nEmail: ${formData.email}\nCategory: ${formData.category || 'General'}\n\nMessage:\n${formData.message}`,
+      priority: 'medium',
+      category: formData.category
     });
     
-    // Reset form
-    setFormData({
-      name: "",
-      email: "",
-      subject: "",
-      category: "",
-      message: ""
-    });
+    if (success) {
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        category: "",
+        message: ""
+      });
+    }
     
     setIsSubmitting(false);
   };
 
-  const handleContactMethod = (method: string) => {
-    toast({
-      title: `${method} Support`,
-      description: "Connect Supabase to enable real-time support features.",
-      duration: 3000,
+  const handleContactMethod = async (method: string) => {
+    if (!user) {
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to access support.",
+        variant: "destructive"
+      });
+      navigate("/auth");
+      return;
+    }
+
+    const ticketSubject = `${method} Support Request`;
+    const ticketMessage = `User has requested ${method.toLowerCase()} support. Please contact them directly for immediate assistance.`;
+    
+    let priority = 'medium';
+    if (method === 'Priority Support') priority = 'high';
+    if (method === 'Live Chat') priority = 'high';
+    
+    const success = await createSupportTicket({
+      subject: ticketSubject,
+      message: ticketMessage,
+      priority
     });
+
+    if (success) {
+      toast({
+        title: `${method} request created!`,
+        description: "Your support request has been created. We'll be in touch soon.",
+      });
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {

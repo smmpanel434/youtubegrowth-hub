@@ -4,9 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { LogOut, CheckCircle, XCircle } from "lucide-react";
+import { LogOut, CheckCircle, XCircle, MessageSquare, Send, Eye } from "lucide-react";
 
 interface Deposit {
   id: string;
@@ -53,10 +57,28 @@ interface SupportTicket {
   };
 }
 
+interface TicketReply {
+  id: string;
+  ticket_id: string;
+  user_id: string | null;
+  admin_id: string | null;
+  message: string;
+  is_admin_reply: boolean;
+  created_at: string;
+  profiles?: {
+    email: string;
+    full_name: string;
+  };
+}
+
 const Admin = () => {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [ticketReplies, setTicketReplies] = useState<Record<string, TicketReply[]>>({});
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -181,6 +203,115 @@ const Admin = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Order updated",
+        description: `Order status changed to ${status}.`,
+      });
+
+      fetchData(); // Refresh data
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateTicketStatus = async (ticketId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from('support_tickets')
+        .update({ status })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Ticket updated",
+        description: `Ticket status changed to ${status}.`,
+      });
+
+      fetchData(); // Refresh data
+      setIsTicketDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const fetchTicketReplies = async (ticketId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('ticket_replies')
+        .select('*')
+        .eq('ticket_id', ticketId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      setTicketReplies(prev => ({
+        ...prev,
+        [ticketId]: data || []
+      }));
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!selectedTicket || !replyMessage.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('ticket_replies')
+        .insert({
+          ticket_id: selectedTicket.id,
+          admin_id: 'admin-user-id', // Replace with actual admin user ID when auth is implemented
+          message: replyMessage,
+          is_admin_reply: true
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Reply sent",
+        description: "Your reply has been sent to the customer.",
+      });
+
+      setReplyMessage("");
+      fetchTicketReplies(selectedTicket.id);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openTicketDialog = (ticket: SupportTicket) => {
+    setSelectedTicket(ticket);
+    setIsTicketDialogOpen(true);
+    fetchTicketReplies(ticket.id);
   };
 
   const handleLogout = () => {
@@ -312,6 +443,21 @@ const Admin = () => {
                           {order.link} • {new Date(order.created_at).toLocaleDateString()}
                         </p>
                       </div>
+                      <div className="flex gap-2">
+                        <Select
+                          value={order.status}
+                          onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   ))}
 
@@ -341,13 +487,23 @@ const Admin = () => {
                           {getStatusBadge(ticket.status)}
                           <Badge variant="outline">{ticket.priority}</Badge>
                         </div>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(ticket.created_at).toLocaleDateString()}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(ticket.created_at).toLocaleDateString()}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openTicketDialog(ticket)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        </div>
                       </div>
                       <div>
                         <p className="font-medium">{ticket.subject}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{ticket.message}</p>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{ticket.message}</p>
                       </div>
                     </div>
                   ))}
@@ -360,6 +516,87 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Ticket Reply Dialog */}
+            <Dialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen}>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>
+                    Support Ticket: {selectedTicket?.subject}
+                  </DialogTitle>
+                </DialogHeader>
+                
+                {selectedTicket && (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {selectedTicket.profiles?.full_name || selectedTicket.profiles?.email}
+                          </span>
+                          {getStatusBadge(selectedTicket.status)}
+                          <Badge variant="outline">{selectedTicket.priority}</Badge>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(selectedTicket.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm">{selectedTicket.message}</p>
+                    </div>
+
+                    {/* Replies */}
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                      {ticketReplies[selectedTicket.id]?.map((reply) => (
+                        <div 
+                          key={reply.id} 
+                          className={`p-3 rounded-lg ${reply.is_admin_reply ? 'bg-primary/10 ml-8' : 'bg-muted mr-8'}`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium">
+                              {reply.is_admin_reply ? 'Admin' : 'Customer'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(reply.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-sm">{reply.message}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Reply Form */}
+                    <div className="space-y-3">
+                      <Textarea
+                        placeholder="Type your reply..."
+                        value={replyMessage}
+                        onChange={(e) => setReplyMessage(e.target.value)}
+                        rows={3}
+                      />
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-2">
+                          <Select
+                            value={selectedTicket.status}
+                            onValueChange={(value) => handleUpdateTicketStatus(selectedTicket.id, value)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="open">Open</SelectItem>
+                              <SelectItem value="closed">Closed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button onClick={handleSendReply} disabled={!replyMessage.trim()}>
+                          <Send className="h-4 w-4 mr-1" />
+                          Send Reply
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </div>

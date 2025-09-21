@@ -85,6 +85,49 @@ const Admin = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Set up real-time subscriptions for admin panel
+    const ordersChannel = supabase
+      .channel('admin-orders-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'orders' },
+        () => fetchData()
+      )
+      .subscribe();
+
+    const depositsChannel = supabase
+      .channel('admin-deposits-changes') 
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'deposits' },
+        () => fetchData()
+      )
+      .subscribe();
+
+    const ticketsChannel = supabase
+      .channel('admin-tickets-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'support_tickets' },
+        () => fetchData()
+      )
+      .subscribe();
+
+    const repliesChannel = supabase
+      .channel('admin-replies-changes')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ticket_replies' },
+        (payload) => {
+          const ticketId = payload.new.ticket_id;
+          fetchTicketReplies(ticketId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      ordersChannel.unsubscribe();
+      depositsChannel.unsubscribe();
+      ticketsChannel.unsubscribe();
+      repliesChannel.unsubscribe();
+    };
   }, []);
 
   const fetchData = async () => {
@@ -281,11 +324,13 @@ const Admin = () => {
     if (!selectedTicket || !replyMessage.trim()) return;
 
     try {
+      // Use null for admin_id since we don't have proper admin authentication
+      // In a real app, this would be the authenticated admin's user ID
       const { error } = await supabase
         .from('ticket_replies')
         .insert({
           ticket_id: selectedTicket.id,
-          admin_id: 'admin-user-id', // Replace with actual admin user ID when auth is implemented
+          admin_id: null,
           message: replyMessage,
           is_admin_reply: true
         });
@@ -448,10 +493,10 @@ const Admin = () => {
                           value={order.status}
                           onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
                         >
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className="w-32 bg-background">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-background border shadow-lg">
                             <SelectItem value="pending">Pending</SelectItem>
                             <SelectItem value="active">Active</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
@@ -578,10 +623,10 @@ const Admin = () => {
                             value={selectedTicket.status}
                             onValueChange={(value) => handleUpdateTicketStatus(selectedTicket.id, value)}
                           >
-                            <SelectTrigger className="w-32">
+                            <SelectTrigger className="w-32 bg-background">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-background border shadow-lg">
                               <SelectItem value="open">Open</SelectItem>
                               <SelectItem value="closed">Closed</SelectItem>
                             </SelectContent>

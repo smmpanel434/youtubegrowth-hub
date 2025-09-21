@@ -103,8 +103,63 @@ const Dashboard = () => {
       fetchDeposits();
       calculateStats();
       fetchTickets();
+
+      // Set up real-time subscriptions
+      const ordersChannel = supabase
+        .channel('orders-changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` },
+          () => {
+            fetchOrders();
+            calculateStats();
+          }
+        )
+        .subscribe();
+
+      const depositsChannel = supabase
+        .channel('deposits-changes')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'deposits', filter: `user_id=eq.${user.id}` },
+          () => {
+            fetchDeposits();
+            calculateStats();
+          }
+        )
+        .subscribe();
+
+      const ticketsChannel = supabase
+        .channel('tickets-changes')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'support_tickets', filter: `user_id=eq.${user.id}` },
+          () => {
+            fetchTickets();
+          }
+        )
+        .subscribe();
+
+      const repliesChannel = supabase
+        .channel('ticket-replies-changes')
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'ticket_replies' },
+          (payload) => {
+            // Check if this reply is for one of user's tickets
+            const ticketId = payload.new.ticket_id;
+            const userTicket = tickets.find(t => t.id === ticketId);
+            if (userTicket) {
+              fetchTicketReplies(ticketId);
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        ordersChannel.unsubscribe();
+        depositsChannel.unsubscribe(); 
+        ticketsChannel.unsubscribe();
+        repliesChannel.unsubscribe();
+      };
     }
-  }, [user]);
+  }, [user, tickets]);
 
   const calculateStats = async () => {
     if (!user) return;

@@ -6,13 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { loadCaptchaEnginge, LoadCanvasTemplate, validateCaptcha } from 'react-simple-captcha';
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [captcha, setCaptcha] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,32 +26,9 @@ const Auth = () => {
     checkAuth();
   }, [navigate]);
 
-  // Load captcha after component mounts and DOM is ready
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      try {
-        loadCaptchaEnginge(6);
-      } catch (error) {
-        console.error("Failed to load captcha:", error);
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate captcha first
-    if (!validateCaptcha(captcha)) {
-      toast({
-        title: "Invalid captcha",
-        description: "Please enter the correct captcha code.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     setLoading(true);
 
     try {
@@ -61,7 +36,6 @@ const Auth = () => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             full_name: fullName,
           }
@@ -90,9 +64,6 @@ const Auth = () => {
         // Switch to login tab
         const loginTab = document.querySelector('[data-value="login"]') as HTMLElement;
         if (loginTab) loginTab.click();
-        // Reload captcha
-        loadCaptchaEnginge(6);
-        setCaptcha("");
       }
     } catch (error: any) {
       toast({
@@ -221,18 +192,6 @@ const Auth = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="bg-muted p-3 rounded-md">
-                    <LoadCanvasTemplate />
-                  </div>
-                  <Input
-                    type="text"
-                    placeholder="Enter the captcha code"
-                    value={captcha}
-                    onChange={(e) => setCaptcha(e.target.value)}
-                    required
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>

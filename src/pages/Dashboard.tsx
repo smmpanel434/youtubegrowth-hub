@@ -719,6 +719,7 @@ const Dashboard = () => {
         onClose={() => setShowSupportModal(false)}
         onSuccess={() => {
           setShowSupportModal(false);
+          fetchTickets();
         }}
       />
     </div>

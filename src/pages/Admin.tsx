@@ -249,6 +249,10 @@ const Admin = () => {
   };
 
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
+    // Optimistic UI update so the dropdown reflects immediately
+    const prevOrders = [...orders];
+    setOrders((current) => current.map((o) => (o.id === orderId ? { ...o, status } : o)));
+
     try {
       const { error } = await supabase
         .from('orders')
@@ -262,8 +266,11 @@ const Admin = () => {
         description: `Order status changed to ${status}.`,
       });
 
-      fetchData(); // Refresh data
+      // Ensure fresh data from server
+      fetchData();
     } catch (error: any) {
+      // Revert on error
+      setOrders(prevOrders);
       toast({
         title: "Error",
         description: error.message,
@@ -324,15 +331,37 @@ const Admin = () => {
     if (!selectedTicket || !replyMessage.trim()) return;
 
     try {
-      // Use null for admin_id since we don't have proper admin authentication
-      // In a real app, this would be the authenticated admin's user ID
+      // Get current authenticated admin user id to satisfy RLS
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      const adminId = userData?.user?.id;
+      if (!adminId) throw new Error("Not authenticated");
+
+      // Optimistic UI update
+      const optimisticReply: TicketReply = {
+        id: crypto.randomUUID(),
+        ticket_id: selectedTicket.id,
+        user_id: null,
+        admin_id: adminId,
+        message: replyMessage,
+        is_admin_reply: true,
+        created_at: new Date().toISOString(),
+        // @ts-expect-error updated_at not needed for UI
+        updated_at: new Date().toISOString(),
+      };
+      setTicketReplies((prev) => ({
+        ...prev,
+        [selectedTicket.id]: [...(prev[selectedTicket.id] || []), optimisticReply],
+      }));
+
       const { error } = await supabase
         .from('ticket_replies')
         .insert({
           ticket_id: selectedTicket.id,
-          admin_id: null,
+          admin_id: adminId,
+          user_id: null,
           message: replyMessage,
-          is_admin_reply: true
+          is_admin_reply: true,
         });
 
       if (error) throw error;
@@ -343,6 +372,7 @@ const Admin = () => {
       });
 
       setReplyMessage("");
+      // Refresh to get canonical ordering and IDs
       fetchTicketReplies(selectedTicket.id);
     } catch (error: any) {
       toast({

@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       deposits: {
         Row: {
+          admin_notes: string | null
           amount: number
           created_at: string
           crypto_address: string | null
@@ -25,8 +26,11 @@ export type Database = {
           transaction_id: string | null
           updated_at: string
           user_id: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
+          admin_notes?: string | null
           amount: number
           created_at?: string
           crypto_address?: string | null
@@ -36,8 +40,11 @@ export type Database = {
           transaction_id?: string | null
           updated_at?: string
           user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
+          admin_notes?: string | null
           amount?: number
           created_at?: string
           crypto_address?: string | null
@@ -47,6 +54,8 @@ export type Database = {
           transaction_id?: string | null
           updated_at?: string
           user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {

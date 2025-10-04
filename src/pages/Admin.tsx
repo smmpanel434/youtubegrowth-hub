@@ -19,6 +19,11 @@ interface Deposit {
   payment_method: string;
   status: string;
   created_at: string;
+  admin_notes?: string;
+  verified_by?: string;
+  verified_at?: string;
+  transaction_id?: string;
+  crypto_address?: string;
   profiles: {
     email: string;
     full_name: string;
@@ -180,12 +185,21 @@ const Admin = () => {
     }
   };
 
-  const handleApproveDeposit = async (depositId: string, amount: number, userId: string) => {
+  const handleApproveDeposit = async (depositId: string, amount: number, userId: string, adminNotes?: string) => {
     try {
-      // Update deposit status to approved
+      // Get current admin user
+      const { data: userData } = await supabase.auth.getUser();
+      const adminId = userData?.user?.id;
+
+      // Update deposit status to approved with verification details
       const { error: depositError } = await supabase
         .from('deposits')
-        .update({ status: 'approved' })
+        .update({ 
+          status: 'approved',
+          admin_notes: adminNotes || null,
+          verified_by: adminId,
+          verified_at: new Date().toISOString()
+        })
         .eq('id', depositId);
 
       if (depositError) throw depositError;
@@ -224,11 +238,20 @@ const Admin = () => {
     }
   };
 
-  const handleRejectDeposit = async (depositId: string) => {
+  const handleRejectDeposit = async (depositId: string, adminNotes?: string) => {
     try {
+      // Get current admin user
+      const { data: userData } = await supabase.auth.getUser();
+      const adminId = userData?.user?.id;
+
       const { error } = await supabase
         .from('deposits')
-        .update({ status: 'rejected' })
+        .update({ 
+          status: 'rejected',
+          admin_notes: adminNotes || null,
+          verified_by: adminId,
+          verified_at: new Date().toISOString()
+        })
         .eq('id', depositId);
 
       if (error) throw error;
@@ -454,33 +477,128 @@ const Admin = () => {
               <CardContent>
                 <div className="space-y-4">
                   {deposits.map((deposit) => (
-                    <div key={deposit.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{deposit.profiles?.full_name || deposit.profiles?.email}</span>
-                          {getStatusBadge(deposit.status)}
+                    <div key={deposit.id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{deposit.profiles?.full_name || deposit.profiles?.email}</span>
+                            {getStatusBadge(deposit.status)}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            ${deposit.amount} • {deposit.payment_method}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(deposit.created_at).toLocaleDateString()} {new Date(deposit.created_at).toLocaleTimeString()}
+                          </p>
+                          {deposit.transaction_id && (
+                            <p className="text-xs text-muted-foreground">
+                              Transaction ID: {deposit.transaction_id}
+                            </p>
+                          )}
+                          {deposit.crypto_address && (
+                            <p className="text-xs text-muted-foreground break-all">
+                              Address: {deposit.crypto_address}
+                            </p>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          ${deposit.amount} • {deposit.payment_method} • {new Date(deposit.created_at).toLocaleDateString()}
-                        </p>
+                        {deposit.status === 'pending' && (
+                          <div className="flex gap-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button size="sm">
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Approve
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Approve Deposit</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">
+                                      Amount: ${deposit.amount}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      User: {deposit.profiles?.full_name || deposit.profiles?.email}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">Admin Notes (Optional)</label>
+                                    <Textarea 
+                                      id={`approve-notes-${deposit.id}`}
+                                      placeholder="Add verification notes..."
+                                      className="min-h-[80px]"
+                                    />
+                                  </div>
+                                  <Button 
+                                    className="w-full"
+                                    onClick={() => {
+                                      const notes = (document.getElementById(`approve-notes-${deposit.id}`) as HTMLTextAreaElement)?.value;
+                                      handleApproveDeposit(deposit.id, deposit.amount, deposit.user_id, notes);
+                                      document.getElementById(`approve-notes-${deposit.id}`)?.closest('div[role="dialog"]')?.querySelector('button')?.click();
+                                    }}
+                                  >
+                                    Confirm Approval
+                                  </Button>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button size="sm" variant="destructive">
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Reject Deposit</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">
+                                      Amount: ${deposit.amount}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      User: {deposit.profiles?.full_name || deposit.profiles?.email}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">Reason for Rejection (Optional)</label>
+                                    <Textarea 
+                                      id={`reject-notes-${deposit.id}`}
+                                      placeholder="Add rejection reason..."
+                                      className="min-h-[80px]"
+                                    />
+                                  </div>
+                                  <Button 
+                                    className="w-full"
+                                    variant="destructive"
+                                    onClick={() => {
+                                      const notes = (document.getElementById(`reject-notes-${deposit.id}`) as HTMLTextAreaElement)?.value;
+                                      handleRejectDeposit(deposit.id, notes);
+                                      document.getElementById(`reject-notes-${deposit.id}`)?.closest('div[role="dialog"]')?.querySelector('button')?.click();
+                                    }}
+                                  >
+                                    Confirm Rejection
+                                  </Button>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        )}
                       </div>
-                      {deposit.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleApproveDeposit(deposit.id, deposit.amount, deposit.user_id)}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleRejectDeposit(deposit.id)}
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Reject
-                          </Button>
+                      
+                      {deposit.admin_notes && (
+                        <div className="pt-2 border-t">
+                          <p className="text-xs font-medium text-muted-foreground">Admin Notes:</p>
+                          <p className="text-sm mt-1">{deposit.admin_notes}</p>
+                          {deposit.verified_at && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Verified: {new Date(deposit.verified_at).toLocaleString()}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>

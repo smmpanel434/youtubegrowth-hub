@@ -272,11 +272,8 @@ const Admin = () => {
   };
 
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
-    // Optimistic UI update so the dropdown reflects immediately
-    const prevOrders = [...orders];
-    setOrders((current) => current.map((o) => (o.id === orderId ? { ...o, status } : o)));
-
     try {
+      // First update in database
       const { error } = await supabase
         .from('orders')
         .update({ status })
@@ -284,21 +281,23 @@ const Admin = () => {
 
       if (error) throw error;
 
+      // Then update local state after successful DB update
+      setOrders((current) => 
+        current.map((o) => (o.id === orderId ? { ...o, status } : o))
+      );
+
       toast({
         title: "Order updated",
         description: `Order status changed to ${status}.`,
       });
-
-      // Ensure fresh data from server
-      fetchData();
     } catch (error: any) {
-      // Revert on error
-      setOrders(prevOrders);
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive"
       });
+      // Refresh to ensure consistency
+      fetchData();
     }
   };
 
@@ -641,13 +640,13 @@ const Admin = () => {
                           value={order.status}
                           onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
                         >
-                          <SelectTrigger className="w-32 bg-background">
-                            <SelectValue />
+                          <SelectTrigger className="w-32 bg-card border">
+                            <SelectValue placeholder={order.status} />
                           </SelectTrigger>
-                          <SelectContent className="bg-background border shadow-lg">
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
+                          <SelectContent className="bg-card border shadow-lg z-50">
+                            <SelectItem value="pending" className="cursor-pointer">Pending</SelectItem>
+                            <SelectItem value="active" className="cursor-pointer">Active</SelectItem>
+                            <SelectItem value="completed" className="cursor-pointer">Completed</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

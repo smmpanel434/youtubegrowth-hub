@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CreditCard, Building, Bitcoin, Copy } from "lucide-react";
+import { CreditCard, Building, Bitcoin, Copy, Smartphone } from "lucide-react";
 
 interface DepositModalProps {
   open: boolean;
@@ -24,6 +24,8 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
   const [loading, setLoading] = useState(false);
 
   const btcAddress = "bc1p53vpr7getgck5d4xva8xjgm7kldkwd7m0l837v7vv79j8vutxn3s3uux47";
+  const mpesaPaybill = "775093";
+  const mpesaAccount = "52332011";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +50,7 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
           user_id: user.id,
           amount: depositAmount,
           payment_method: paymentMethod,
-          crypto_address: paymentMethod === 'crypto' ? btcAddress : null,
+          crypto_address: paymentMethod === 'crypto' ? btcAddress : paymentMethod === 'mpesa' ? `Paybill: ${mpesaPaybill}, Account: ${mpesaAccount}` : null,
           status: 'pending'
         });
 
@@ -58,6 +60,8 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
         title: "Deposit request created",
         description: paymentMethod === 'crypto' 
           ? "Please send Bitcoin to the provided address. Your account will be credited within 30 minutes after admin confirmation."
+          : paymentMethod === 'mpesa'
+          ? "Please send M-Pesa payment to the provided Paybill number. Your account will be credited after admin confirmation."
           : "Your deposit request has been submitted and will be processed shortly.",
       });
 
@@ -82,7 +86,27 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
     });
   };
 
+  const copyMpesaDetails = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: `${label} copied to clipboard`,
+    });
+  };
+
   const paymentMethods = [
+    {
+      id: "mpesa",
+      label: "M-Pesa",
+      icon: Smartphone,
+      description: "Instant mobile payment"
+    },
+    {
+      id: "crypto",
+      label: "Bitcoin (BTC)",
+      icon: Bitcoin,
+      description: "1-6 confirmations"
+    },
     {
       id: "card",
       label: "Credit/Debit Card",
@@ -94,12 +118,6 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
       label: "Bank Transfer",
       icon: Building,
       description: "1-3 business days"
-    },
-    {
-      id: "crypto",
-      label: "Bitcoin (BTC)",
-      icon: Bitcoin,
-      description: "1-6 confirmations"
     }
   ];
 
@@ -145,6 +163,57 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
               ))}
             </RadioGroup>
           </div>
+
+          {paymentMethod === 'mpesa' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">M-Pesa Payment Details</CardTitle>
+                <CardDescription>Send payment via M-Pesa</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Paybill Number</Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 p-2 bg-muted rounded text-sm font-bold">
+                      {mpesaPaybill}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyMpesaDetails(mpesaPaybill, "Paybill number")}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Account Number</Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 p-2 bg-muted rounded text-sm font-bold">
+                      {mpesaAccount}
+                    </code>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyMpesaDetails(mpesaAccount, "Account number")}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  1. Go to M-Pesa menu<br/>
+                  2. Select Lipa na M-Pesa → Pay Bill<br/>
+                  3. Enter Paybill Number: {mpesaPaybill}<br/>
+                  4. Enter Account Number: {mpesaAccount}<br/>
+                  5. Enter the amount and confirm<br/>
+                  Your account will be credited after admin confirms the payment.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {paymentMethod === 'crypto' && (
             <Card>
@@ -199,11 +268,11 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !amount || (paymentMethod !== 'crypto')} 
+              disabled={loading || !amount || (paymentMethod !== 'crypto' && paymentMethod !== 'mpesa')} 
               className="flex-1"
             >
               {loading ? "Processing..." : 
-               paymentMethod === 'crypto' ? "Create Deposit Request" : "Unavailable in Region"}
+               (paymentMethod === 'crypto' || paymentMethod === 'mpesa') ? "Create Deposit Request" : "Unavailable in Region"}
             </Button>
           </div>
         </form>

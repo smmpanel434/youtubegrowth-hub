@@ -22,6 +22,10 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [loading, setLoading] = useState(false);
+  const [transactionCode, setTransactionCode] = useState("");
+
+  const usdToKesRate = 130; // Approximate exchange rate
+  const kesAmount = amount ? (parseFloat(amount) * usdToKesRate).toFixed(2) : "0.00";
 
   const btcAddress = "bc1p53vpr7getgck5d4xva8xjgm7kldkwd7m0l837v7vv79j8vutxn3s3uux47";
   const mpesaPaybill = "775093";
@@ -51,6 +55,7 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
           amount: depositAmount,
           payment_method: paymentMethod,
           crypto_address: paymentMethod === 'crypto' ? btcAddress : paymentMethod === 'mpesa' ? `Paybill: ${mpesaPaybill}, Account: ${mpesaAccount}` : null,
+          transaction_id: paymentMethod === 'mpesa' ? transactionCode : null,
           status: 'pending'
         });
 
@@ -67,6 +72,7 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
 
       onSuccess();
       setAmount("");
+      setTransactionCode("");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -172,6 +178,13 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
+                  <Label className="text-xs font-semibold">Amount to Pay</Label>
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <p className="text-2xl font-bold text-primary">KES {kesAmount}</p>
+                    <p className="text-xs text-muted-foreground">Equivalent to ${amount || "0.00"} USD</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
                   <Label className="text-xs">Paybill Number</Label>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 p-2 bg-muted rounded text-sm font-bold">
@@ -203,12 +216,28 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
                     </Button>
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="transactionCode" className="text-xs font-semibold">M-Pesa Transaction Code *</Label>
+                  <Input
+                    id="transactionCode"
+                    type="text"
+                    placeholder="e.g., SH12ABC34D"
+                    value={transactionCode}
+                    onChange={(e) => setTransactionCode(e.target.value.toUpperCase())}
+                    required={paymentMethod === 'mpesa'}
+                    className="font-mono"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter the M-Pesa confirmation code you received via SMS
+                  </p>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   1. Go to M-Pesa menu<br/>
                   2. Select Lipa na M-Pesa → Pay Bill<br/>
                   3. Enter Paybill Number: {mpesaPaybill}<br/>
                   4. Enter Account Number: {mpesaAccount}<br/>
-                  5. Enter the amount and confirm<br/>
+                  5. Enter amount: KES {kesAmount}<br/>
+                  6. Confirm and enter transaction code above<br/>
                   Your account will be credited after admin confirms the payment.
                 </p>
               </CardContent>
@@ -268,7 +297,7 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !amount || (paymentMethod !== 'crypto' && paymentMethod !== 'mpesa')} 
+              disabled={loading || !amount || (paymentMethod === 'mpesa' && !transactionCode) || (paymentMethod !== 'crypto' && paymentMethod !== 'mpesa')} 
               className="flex-1"
             >
               {loading ? "Processing..." : 

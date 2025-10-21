@@ -50,7 +50,7 @@ const Home = () => {
   const services = [
     {
       title: "YouTube Views",
-      description: "High-quality views to boost your video visibility",
+      description: "High-quality views to boost your video visibility. Start time: 0-12 hours. Speed: 500-1000 per day",
       icon: Eye,
       price: "$2.99",
       originalPrice: "$4.99",

@@ -41,7 +41,7 @@ const Services = () => {
   const allServices = [
     {
       title: "YouTube Views",
-      description: "High-quality views to boost your video visibility",
+      description: "High-quality views to boost your video visibility. Start time: 0-12 hours. Speed: 500-1000 per day",
       icon: Eye,
       price: "$2.99",
       originalPrice: "$4.99",
@@ -52,7 +52,7 @@ const Services = () => {
     },
     {
       title: "YouTube Subscribers - Standard",
-      description: "Grow your channel with real subscribers",
+      description: "Grow your channel with real subscribers. Start time: 0-24 hours. Speed: 50-100 per day",
       icon: Users,
       price: "$24.99",
       features: ["Real subscribers", "Gradual delivery", "30-day refill", "Safe & secure"],
@@ -61,18 +61,27 @@ const Services = () => {
     },
     {
       title: "YouTube Subscribers - High Quality",
-      description: "Premium subscribers with profile pictures and activity",
+      description: "Premium subscribers at affordable price. Start time: 0-24 hours. Speed: 20-50 per day",
+      icon: Users,
+      price: "$12.00",
+      features: ["Quality accounts", "Real profiles", "Safe delivery", "30-day refill"],
+      isPopular: true,
+      deliveryTime: "1-3 days",
+      category: "subscribers",
+    },
+    {
+      title: "YouTube Subscribers - Premium Plus",
+      description: "Premium subscribers with profile pictures and activity. Start time: 0-48 hours. Speed: 10-30 per day",
       icon: Users,
       price: "$44.00",
       originalPrice: "$59.99",
       features: ["High-quality accounts", "Profile pictures", "Gradual delivery", "Lifetime guarantee", "Non-drop protection"],
-      isPopular: true,
       deliveryTime: "2-5 days",
       category: "subscribers",
     },
     {
       title: "YouTube Subscribers - Non Drop",
-      description: "Permanent subscribers with replacement guarantee",
+      description: "Permanent subscribers with replacement guarantee. Start time: 0-24 hours. Speed: 30-60 per day",
       icon: Users,
       price: "$38.99",
       features: ["Non-drop guarantee", "Real accounts", "Replacement warranty", "Safe delivery"],
@@ -81,7 +90,7 @@ const Services = () => {
     },
     {
       title: "YouTube Likes - Standard",
-      description: "Increase engagement with genuine likes",
+      description: "Increase engagement with genuine likes. Start time: 0-6 hours. Speed: 100-500 per day",
       icon: Heart,
       price: "$1.99",
       features: ["High-quality likes", "Fast delivery", "Natural growth", "No password needed"],
@@ -90,7 +99,7 @@ const Services = () => {
     },
     {
       title: "YouTube Likes - Premium",
-      description: "Premium likes from active profiles",
+      description: "Premium likes from active profiles. Start time: 0-2 hours. Speed: 200-1000 per day",
       icon: Heart,
       price: "$3.49",
       features: ["Premium accounts", "Instant start", "Non-drop guarantee", "24/7 support"],
@@ -99,7 +108,7 @@ const Services = () => {
     },
     {
       title: "YouTube Comments - Basic",
-      description: "Boost engagement with custom comments",
+      description: "Boost engagement with custom comments. Start time: 12-24 hours. Speed: 5-10 per day",
       icon: MessageCircle,
       price: "$5.99",
       features: ["Custom comments", "Real accounts", "Natural timing", "Moderation safe"],
@@ -108,7 +117,7 @@ const Services = () => {
     },
     {
       title: "YouTube Comments - Premium",
-      description: "High-quality custom comments from verified accounts",
+      description: "High-quality custom comments from verified accounts. Start time: 6-12 hours. Speed: 10-20 per day",
       icon: MessageCircle,
       price: "$12.99",
       features: ["Verified accounts", "Custom messages", "Profile pictures", "Instant moderation"],
@@ -117,7 +126,7 @@ const Services = () => {
     },
     {
       title: "YouTube Shares",
-      description: "Increase video reach with social shares",
+      description: "Increase video reach with social shares. Start time: 0-6 hours. Speed: 50-200 per day",
       icon: Share2,
       price: "$3.99",
       features: ["Multiple platforms", "Real shares", "Organic growth", "Safe delivery"],
@@ -126,7 +135,7 @@ const Services = () => {
     },
     {
       title: "YouTube Watch Time",
-      description: "Meet monetization requirements faster",
+      description: "Meet monetization requirements faster. Start time: 0-48 hours. Speed: 300-500 hours per day",
       icon: Clock,
       price: "$19.99",
       features: ["4000+ hours", "Gradual delivery", "Retention focused", "Algorithm friendly"],
@@ -135,7 +144,7 @@ const Services = () => {
     },
     {
       title: "YouTube Shorts Views",
-      description: "Boost your Shorts with targeted views",
+      description: "Boost your Shorts with targeted views. Start time: 0-1 hours. Speed: 1000-5000 per day",
       icon: Play,
       price: "$1.49",
       features: ["Shorts optimized", "Fast delivery", "High retention", "Mobile focused"],
@@ -144,7 +153,7 @@ const Services = () => {
     },
     {
       title: "Premium YouTube Package",
-      description: "Complete growth solution for serious creators",
+      description: "Complete growth solution for serious creators. Start time: 0-24 hours. Custom speed based on package",
       icon: Users,
       price: "$49.99",
       originalPrice: "$79.99",

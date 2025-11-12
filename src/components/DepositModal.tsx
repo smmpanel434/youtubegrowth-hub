@@ -33,7 +33,14 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to make a deposit.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const depositAmount = parseFloat(amount);
     if (depositAmount < 1) {
@@ -48,10 +55,23 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
     setLoading(true);
 
     try {
+      // Verify user session before inserting
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        toast({
+          title: "Session expired",
+          description: "Please sign in again.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase
         .from('deposits')
         .insert({
-          user_id: user.id,
+          user_id: session.user.id,
           amount: depositAmount,
           payment_method: paymentMethod,
           crypto_address: paymentMethod === 'crypto' ? btcAddress : paymentMethod === 'mpesa' ? `Paybill: ${mpesaPaybill}, Account: ${mpesaAccount}` : null,

@@ -386,9 +386,6 @@ const Dashboard = () => {
       active: "bg-blue-500", 
       processing: "bg-blue-500",
       completed: "bg-green-500",
-      approved: "bg-green-500",
-      cancelled: "bg-red-500",
-      rejected: "bg-red-500",
       failed: "bg-red-500",
       open: "bg-yellow-500",
       closed: "bg-gray-500"

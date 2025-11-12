@@ -191,11 +191,11 @@ const Admin = () => {
       const { data: userData } = await supabase.auth.getUser();
       const adminId = userData?.user?.id;
 
-      // Update deposit status to approved with verification details
+      // Update deposit status to completed with verification details
       const { error: depositError } = await supabase
         .from('deposits')
         .update({ 
-          status: 'approved',
+          status: 'completed',
           admin_notes: adminNotes || null,
           verified_by: adminId,
           verified_at: new Date().toISOString()
@@ -247,7 +247,7 @@ const Admin = () => {
       const { error } = await supabase
         .from('deposits')
         .update({ 
-          status: 'rejected',
+          status: 'failed',
           admin_notes: adminNotes || null,
           verified_by: adminId,
           verified_at: new Date().toISOString()
@@ -418,15 +418,15 @@ const Admin = () => {
   const getStatusBadge = (status: string) => {
     const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
       pending: "secondary",
-      approved: "default",
-      rejected: "destructive",
       completed: "default",
+      failed: "destructive",
       processing: "secondary",
+      active: "default",
       open: "secondary",
       closed: "default"
     };
     
-    return <Badge variant={statusColors[status] || "secondary"}>{status}</Badge>;
+    return <Badge variant={statusColors[status] || "secondary"}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
   };
 
   if (loading) {

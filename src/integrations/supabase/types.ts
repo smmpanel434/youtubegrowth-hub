@@ -281,10 +281,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_admin_user: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      create_admin_user: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

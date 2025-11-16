@@ -99,11 +99,35 @@ const Auth = () => {
           variant: "destructive"
         });
       } else {
-        navigate("/dashboard");
-        toast({
-          title: "Welcome back!",
-          description: "You have successfully signed in.",
-        });
+        // Check if user is admin
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (profileData?.is_admin) {
+            navigate("/admin");
+            toast({
+              title: "Welcome Admin!",
+              description: "You have successfully signed in.",
+            });
+          } else {
+            navigate("/dashboard");
+            toast({
+              title: "Welcome back!",
+              description: "You have successfully signed in.",
+            });
+          }
+        } else {
+          navigate("/dashboard");
+          toast({
+            title: "Welcome back!",
+            description: "You have successfully signed in.",
+          });
+        }
       }
     } catch (error: any) {
       toast({

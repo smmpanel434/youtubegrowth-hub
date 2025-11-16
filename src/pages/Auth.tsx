@@ -81,20 +81,14 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Check for admin login first
-      if (email === "admin" && password === "admin100") {
-        // Create a special admin session
-        navigate("/admin");
-        toast({
-          title: "Admin access granted",
-          description: "Welcome to the admin panel.",
-        });
-        setLoading(false);
-        return;
+      // Map admin alias to admin email for proper auth session
+      let loginEmail = email.trim();
+      if (loginEmail.toLowerCase() === 'admin') {
+        loginEmail = 'admin@protocal100.com';
       }
 
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: loginEmail,
         password,
       });
 

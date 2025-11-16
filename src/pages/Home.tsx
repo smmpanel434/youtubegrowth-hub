@@ -95,6 +95,17 @@ const Home = () => {
 
   return (
     <div className="min-h-screen">
+      {/* Admin Access Button - Fixed Position */}
+      <Link to="/auth">
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="fixed bottom-4 right-4 z-50 shadow-lg bg-background/95 backdrop-blur-sm border-muted-foreground/20 hover:border-primary/50 text-xs"
+        >
+          Admin Login
+        </Button>
+      </Link>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-background via-background to-muted/30">
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-background/40" />

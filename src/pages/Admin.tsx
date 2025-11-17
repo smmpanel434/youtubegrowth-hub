@@ -418,6 +418,7 @@ const Admin = () => {
   const getStatusBadge = (status: string) => {
     const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
       pending: "secondary",
+      "in progress": "secondary",
       completed: "default",
       failed: "destructive",
       processing: "secondary",
@@ -645,6 +646,7 @@ const Admin = () => {
                           </SelectTrigger>
                           <SelectContent className="bg-card border shadow-lg z-50">
                             <SelectItem value="pending" className="cursor-pointer">Pending</SelectItem>
+                            <SelectItem value="in progress" className="cursor-pointer">In Progress</SelectItem>
                             <SelectItem value="active" className="cursor-pointer">Active</SelectItem>
                             <SelectItem value="completed" className="cursor-pointer">Completed</SelectItem>
                           </SelectContent>

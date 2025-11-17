@@ -383,6 +383,7 @@ const Dashboard = () => {
   const getStatusBadge = (status: string) => {
     const statusColors = {
       pending: "bg-yellow-500",
+      "in progress": "bg-purple-500",
       active: "bg-blue-500", 
       processing: "bg-blue-500",
       completed: "bg-green-500",

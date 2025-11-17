@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { CreditCard, Building, Bitcoin, Copy, Smartphone } from "lucide-react";
@@ -149,7 +150,7 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add Funds</DialogTitle>
           <DialogDescription>
@@ -157,7 +158,8 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <ScrollArea className="flex-1 -mx-6 px-6">
+          <form onSubmit={handleSubmit} className="space-y-6 pb-4">
           <div className="space-y-2">
             <Label htmlFor="amount">Amount (USD)</Label>
             <Input
@@ -311,20 +313,21 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
             </Card>
           )}
 
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading || !amount || (paymentMethod === 'mpesa' && !transactionCode) || (paymentMethod !== 'crypto' && paymentMethod !== 'mpesa')} 
-              className="flex-1"
-            >
-              {loading ? "Processing..." : 
-               (paymentMethod === 'crypto' || paymentMethod === 'mpesa') ? "Create Deposit Request" : "Unavailable in Region"}
-            </Button>
-          </div>
-        </form>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading || !amount || (paymentMethod === 'mpesa' && !transactionCode) || (paymentMethod !== 'crypto' && paymentMethod !== 'mpesa')} 
+                className="flex-1"
+              >
+                {loading ? "Processing..." : 
+                 (paymentMethod === 'crypto' || paymentMethod === 'mpesa') ? "Create Deposit Request" : "Unavailable in Region"}
+              </Button>
+            </div>
+          </form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

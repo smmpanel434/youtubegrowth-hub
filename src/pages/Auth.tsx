@@ -102,11 +102,11 @@ const Auth = () => {
         // Check if user is admin
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const { data: profileData } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('is_admin')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
           
           if (profileData?.is_admin) {
             navigate("/admin");

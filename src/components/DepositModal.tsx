@@ -150,15 +150,15 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[550px] max-h-[85vh] p-0 gap-0">
-        <DialogHeader className="p-6 pb-4">
+      <DialogContent className="sm:max-w-[550px] max-w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-6 pb-4 shrink-0">
           <DialogTitle>Add Funds</DialogTitle>
           <DialogDescription>
             Choose your payment method and amount to add to your account
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6">
+        <ScrollArea className="flex-1 px-6 overflow-y-auto">
           <form onSubmit={handleSubmit} className="space-y-5 py-2 pb-6">
           <div className="space-y-2">
             <Label htmlFor="amount">Amount (USD)</Label>
@@ -332,7 +332,7 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
           </form>
         </ScrollArea>
         
-        <div className="flex gap-2 p-6 pt-4 border-t bg-muted/20">
+        <div className="flex gap-2 p-6 pt-4 border-t bg-muted/20 shrink-0">
           <Button type="button" variant="outline" onClick={onClose} className="flex-1">
             Cancel
           </Button>

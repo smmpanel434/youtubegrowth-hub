@@ -150,16 +150,16 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[550px] max-h-[85vh] p-0 gap-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle>Add Funds</DialogTitle>
           <DialogDescription>
             Choose your payment method and amount to add to your account
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          <form onSubmit={handleSubmit} className="space-y-6 pb-4">
+        <ScrollArea className="flex-1 px-6">
+          <form onSubmit={handleSubmit} className="space-y-5 py-2 pb-6">
           <div className="space-y-2">
             <Label htmlFor="amount">Amount (USD)</Label>
             <Input
@@ -193,53 +193,60 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
           </div>
 
           {paymentMethod === 'mpesa' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">M-Pesa Payment Details</CardTitle>
-                <CardDescription>Send payment via M-Pesa</CardDescription>
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">M-Pesa Payment Details</CardTitle>
+                <CardDescription className="text-xs">Complete payment to add funds</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">Amount to Pay</Label>
-                  <div className="p-3 bg-primary/10 rounded-lg">
+                  <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
                     <p className="text-2xl font-bold text-primary">KES {kesAmount}</p>
-                    <p className="text-xs text-muted-foreground">Equivalent to ${amount || "0.00"} USD</p>
+                    <p className="text-xs text-muted-foreground mt-1">≈ ${amount || "0.00"} USD</p>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Paybill Number</Label>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 p-2 bg-muted rounded text-sm font-bold">
-                      {mpesaPaybill}
-                    </code>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyMpesaDetails(mpesaPaybill, "Paybill number")}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
+                
+                <div className="grid gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Paybill Number</Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 p-2.5 bg-muted rounded text-sm font-bold">
+                        {mpesaPaybill}
+                      </code>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyMpesaDetails(mpesaPaybill, "Paybill number")}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Account Number</Label>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 p-2.5 bg-muted rounded text-sm font-bold">
+                        {mpesaAccount}
+                      </code>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyMpesaDetails(mpesaAccount, "Account number")}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Account Number</Label>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 p-2 bg-muted rounded text-sm font-bold">
-                      {mpesaAccount}
-                    </code>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyMpesaDetails(mpesaAccount, "Account number")}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="transactionCode" className="text-xs font-semibold">M-Pesa Transaction Code *</Label>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="transactionCode" className="text-xs font-semibold">
+                    M-Pesa Transaction Code *
+                  </Label>
                   <Input
                     id="transactionCode"
                     type="text"
@@ -250,31 +257,37 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
                     className="font-mono"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Enter the M-Pesa confirmation code you received via SMS
+                    Enter the confirmation code from your SMS
                   </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  1. Go to M-Pesa menu<br/>
-                  2. Select Lipa na M-Pesa → Pay Bill<br/>
-                  3. Enter Paybill Number: {mpesaPaybill}<br/>
-                  4. Enter Account Number: {mpesaAccount}<br/>
-                  5. Enter amount: KES {kesAmount}<br/>
-                  6. Confirm and enter transaction code above<br/>
-                  Your account will be credited after admin confirms the payment.
-                </p>
+
+                <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                  <p className="text-xs font-medium mb-2">Payment Steps:</p>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Open M-Pesa on your phone</li>
+                    <li>Select Lipa na M-Pesa → Pay Bill</li>
+                    <li>Enter Paybill: <span className="font-bold">{mpesaPaybill}</span></li>
+                    <li>Enter Account: <span className="font-bold">{mpesaAccount}</span></li>
+                    <li>Enter Amount: <span className="font-bold">KES {kesAmount}</span></li>
+                    <li>Complete payment & enter code above</li>
+                  </ol>
+                  <p className="text-xs text-muted-foreground pt-2 border-t border-border/50 mt-2">
+                    ✓ Your account will be credited after admin verification
+                  </p>
+                </div>
               </CardContent>
             </Card>
           )}
 
           {paymentMethod === 'crypto' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Bitcoin Address</CardTitle>
-                <CardDescription>Send Bitcoin to this address</CardDescription>
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Bitcoin Address</CardTitle>
+                <CardDescription className="text-xs">Send Bitcoin to this address</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 p-2 bg-muted rounded text-xs break-all">
+              <CardContent className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <code className="flex-1 p-3 bg-muted rounded text-xs break-all font-mono leading-relaxed">
                     {btcAddress}
                   </code>
                   <Button
@@ -282,13 +295,16 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
                     variant="outline"
                     size="sm"
                     onClick={copyBtcAddress}
+                    className="shrink-0"
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Send the exact amount to this address. Your account will be credited within 30 minutes after admin confirmation of the blockchain transaction.
-                </p>
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">
+                    Send the exact amount in Bitcoin to this address. Your account will be credited within 30 minutes after admin confirms the blockchain transaction.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -313,21 +329,24 @@ const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) => {
             </Card>
           )}
 
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={loading || !amount || (paymentMethod === 'mpesa' && !transactionCode) || (paymentMethod !== 'crypto' && paymentMethod !== 'mpesa')} 
-                className="flex-1"
-              >
-                {loading ? "Processing..." : 
-                 (paymentMethod === 'crypto' || paymentMethod === 'mpesa') ? "Create Deposit Request" : "Unavailable in Region"}
-              </Button>
-            </div>
           </form>
         </ScrollArea>
+        
+        <div className="flex gap-2 p-6 pt-4 border-t bg-muted/20">
+          <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            Cancel
+          </Button>
+          <Button 
+            type="submit"
+            form="deposit-form"
+            disabled={loading || !amount || (paymentMethod === 'mpesa' && !transactionCode) || (paymentMethod !== 'crypto' && paymentMethod !== 'mpesa')} 
+            className="flex-1"
+            onClick={handleSubmit}
+          >
+            {loading ? "Processing..." : 
+             (paymentMethod === 'crypto' || paymentMethod === 'mpesa') ? "Submit Request" : "Unavailable"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

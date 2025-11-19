@@ -85,10 +85,49 @@ const Admin = () => {
   const [replyMessage, setReplyMessage] = useState("");
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Check admin access
   useEffect(() => {
+    const checkAdminAccess = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
+
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (error || !profileData?.is_admin) {
+          toast({
+            title: "Access Denied",
+            description: "You don't have permission to access the admin panel.",
+            variant: "destructive"
+          });
+          navigate("/dashboard");
+          return;
+        }
+
+        setIsAdmin(true);
+      } catch (error: any) {
+        console.error("Admin access check error:", error);
+        navigate("/auth");
+      }
+    };
+
+    checkAdminAccess();
+  }, [navigate, toast]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    
     fetchData();
 
     // Set up real-time subscriptions for admin panel
@@ -142,42 +181,52 @@ const Admin = () => {
         .from('deposits')
         .select(`
           *,
-          profiles!deposits_user_id_fkey (email, full_name)
+          profiles!inner (email, full_name)
         `)
         .order('created_at', { ascending: false });
 
-      if (depositsError) throw depositsError;
+      if (depositsError) {
+        console.error("Deposits fetch error:", depositsError);
+        throw depositsError;
+      }
 
       // Fetch orders with user profiles and services
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
           *,
-          profiles!orders_user_id_fkey (email, full_name),
-          services (name)
+          profiles!inner (email, full_name),
+          services!inner (name)
         `)
         .order('created_at', { ascending: false });
 
-      if (ordersError) throw ordersError;
+      if (ordersError) {
+        console.error("Orders fetch error:", ordersError);
+        throw ordersError;
+      }
 
       // Fetch support tickets with user profiles
       const { data: ticketsData, error: ticketsError } = await supabase
         .from('support_tickets')
         .select(`
           *,
-          profiles!support_tickets_user_id_fkey (email, full_name)
+          profiles!inner (email, full_name)
         `)
         .order('created_at', { ascending: false });
 
-      if (ticketsError) throw ticketsError;
+      if (ticketsError) {
+        console.error("Tickets fetch error:", ticketsError);
+        throw ticketsError;
+      }
 
       setDeposits(depositsData || []);
       setOrders(ordersData || []);
       setTickets(ticketsData || []);
     } catch (error: any) {
+      console.error("Fetch data error:", error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error loading data",
+        description: error.message || "Failed to load admin data",
         variant: "destructive"
       });
     } finally {
@@ -334,16 +383,17 @@ const Admin = () => {
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Ticket replies fetch error:", error);
+        throw error;
+      }
 
-      setTicketReplies(prev => ({
-        ...prev,
-        [ticketId]: data || []
-      }));
+      setTicketReplies(prev => ({ ...prev, [ticketId]: data || [] }));
     } catch (error: any) {
+      console.error("Fetch ticket replies error:", error);
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Error loading replies",
+        description: error.message || "Failed to load ticket replies",
         variant: "destructive"
       });
     }
@@ -430,7 +480,7 @@ const Admin = () => {
     return <Badge variant={statusColors[status] || "secondary"}>{status.charAt(0).toUpperCase() + status.slice(1)}</Badge>;
   };
 
-  if (loading) {
+  if (loading || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

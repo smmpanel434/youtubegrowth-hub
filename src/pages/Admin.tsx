@@ -181,7 +181,7 @@ const Admin = () => {
         .from('deposits')
         .select(`
           *,
-          profiles!inner (email, full_name)
+          profiles!deposits_user_id_fkey (email, full_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -195,8 +195,8 @@ const Admin = () => {
         .from('orders')
         .select(`
           *,
-          profiles!inner (email, full_name),
-          services!inner (name)
+          profiles!orders_user_id_fkey (email, full_name),
+          services!orders_service_id_fkey (name)
         `)
         .order('created_at', { ascending: false });
 
@@ -210,7 +210,7 @@ const Admin = () => {
         .from('support_tickets')
         .select(`
           *,
-          profiles!inner (email, full_name)
+          profiles!support_tickets_user_id_fkey (email, full_name)
         `)
         .order('created_at', { ascending: false });
 

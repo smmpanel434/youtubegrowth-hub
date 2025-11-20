@@ -76,14 +76,29 @@ interface TicketReply {
   };
 }
 
+interface UserProfile {
+  id: string;
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  balance: number;
+  is_admin: boolean;
+  created_at: string;
+}
+
 const Admin = () => {
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [ticketReplies, setTicketReplies] = useState<Record<string, TicketReply[]>>({});
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [replyMessage, setReplyMessage] = useState("");
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [newBalance, setNewBalance] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
@@ -166,11 +181,20 @@ const Admin = () => {
       )
       .subscribe();
 
+    const profilesChannel = supabase
+      .channel('admin-profiles-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => fetchData()
+      )
+      .subscribe();
+
     return () => {
       ordersChannel.unsubscribe();
       depositsChannel.unsubscribe();
       ticketsChannel.unsubscribe();
       repliesChannel.unsubscribe();
+      profilesChannel.unsubscribe();
     };
   }, []);
 
@@ -219,9 +243,21 @@ const Admin = () => {
         throw ticketsError;
       }
 
+      // Fetch all users
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (usersError) {
+        console.error("Users fetch error:", usersError);
+        throw usersError;
+      }
+
       setDeposits(depositsData || []);
       setOrders(ordersData || []);
       setTickets(ticketsData || []);
+      setUsers(usersData || []);
     } catch (error: any) {
       console.error("Fetch data error:", error);
       toast({
@@ -461,9 +497,59 @@ const Admin = () => {
     fetchTicketReplies(ticket.id);
   };
 
+  const handleUpdateBalance = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const balanceValue = parseFloat(newBalance);
+      if (isNaN(balanceValue) || balanceValue < 0) {
+        toast({
+          title: "Invalid balance",
+          description: "Please enter a valid positive number",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ balance: balanceValue })
+        .eq('user_id', selectedUser.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Balance updated",
+        description: `User balance has been updated to $${balanceValue.toFixed(2)}`,
+      });
+
+      setIsUserDialogOpen(false);
+      setSelectedUser(null);
+      setNewBalance("");
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openUserDialog = (user: UserProfile) => {
+    setSelectedUser(user);
+    setNewBalance(user.balance.toString());
+    setIsUserDialogOpen(true);
+  };
+
   const handleLogout = () => {
     navigate("/");
   };
+
+  const filteredUsers = users.filter(user => 
+    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (user.full_name?.toLowerCase() || "").includes(searchQuery.toLowerCase())
+  );
 
   const getStatusBadge = (status: string) => {
     const statusColors: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
@@ -506,7 +592,7 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="deposits" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="deposits">
               Deposits ({deposits.filter(d => d.status === 'pending').length})
             </TabsTrigger>
@@ -514,6 +600,7 @@ const Admin = () => {
             <TabsTrigger value="tickets">
               Support ({tickets.filter(t => t.status === 'open').length})
             </TabsTrigger>
+            <TabsTrigger value="users">Users ({users.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="deposits" className="space-y-4">
@@ -836,6 +923,101 @@ const Admin = () => {
                           Send Reply
                         </Button>
                       </div>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>View and manage user accounts and balances</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <Input
+                    placeholder="Search users by email or name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="max-w-md"
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  {filteredUsers.map((user) => (
+                    <div key={user.id} className="p-4 border rounded-lg space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{user.full_name || user.email}</span>
+                            {user.is_admin && <Badge variant="default">Admin</Badge>}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <p className="text-sm font-medium">Balance: ${user.balance.toFixed(2)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">
+                            Joined: {new Date(user.created_at).toLocaleDateString()}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openUserDialog(user)}
+                          >
+                            Edit Balance
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {filteredUsers.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">
+                      {searchQuery ? "No users found matching your search." : "No users found."}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* User Balance Edit Dialog */}
+            <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Update User Balance</DialogTitle>
+                </DialogHeader>
+                
+                {selectedUser && (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">User</p>
+                      <p className="font-medium">{selectedUser.full_name || selectedUser.email}</p>
+                      <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">New Balance ($)</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={newBalance}
+                        onChange={(e) => setNewBalance(e.target.value)}
+                        placeholder="Enter new balance"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleUpdateBalance}>
+                        Update Balance
+                      </Button>
                     </div>
                   </div>
                 )}

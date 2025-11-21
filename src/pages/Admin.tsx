@@ -786,6 +786,7 @@ const Admin = () => {
                             <SelectItem value="in progress" className="cursor-pointer">In Progress</SelectItem>
                             <SelectItem value="active" className="cursor-pointer">Active</SelectItem>
                             <SelectItem value="completed" className="cursor-pointer">Completed</SelectItem>
+                            <SelectItem value="cancelled" className="cursor-pointer">Cancelled</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

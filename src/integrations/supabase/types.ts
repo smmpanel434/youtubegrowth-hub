@@ -124,6 +124,7 @@ export type Database = {
           created_at: string
           email: string
           full_name: string | null
+          hide_loading: boolean | null
           id: string
           is_admin: boolean
           updated_at: string
@@ -134,6 +135,7 @@ export type Database = {
           created_at?: string
           email: string
           full_name?: string | null
+          hide_loading?: boolean | null
           id?: string
           is_admin?: boolean
           updated_at?: string
@@ -144,6 +146,7 @@ export type Database = {
           created_at?: string
           email?: string
           full_name?: string | null
+          hide_loading?: boolean | null
           id?: string
           is_admin?: boolean
           updated_at?: string

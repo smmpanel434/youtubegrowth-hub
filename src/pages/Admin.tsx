@@ -196,7 +196,7 @@ const Admin = () => {
       repliesChannel.unsubscribe();
       profilesChannel.unsubscribe();
     };
-  }, []);
+  }, [isAdmin]);
 
   const fetchData = async () => {
     try {

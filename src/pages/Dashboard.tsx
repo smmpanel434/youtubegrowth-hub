@@ -145,7 +145,14 @@ const Dashboard = () => {
             // Check if this reply is for one of user's tickets
             const ticketId = payload.new.ticket_id;
             const userTicket = tickets.find(t => t.id === ticketId);
-            if (userTicket) {
+            if (userTicket && payload.new.is_admin_reply) {
+              fetchTicketReplies(ticketId);
+              // Show notification for admin replies
+              toast({
+                title: "New Message Received",
+                description: `Admin replied to your ticket: "${userTicket.subject}"`,
+              });
+            } else if (userTicket) {
               fetchTicketReplies(ticketId);
             }
           }

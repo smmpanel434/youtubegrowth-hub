@@ -69,33 +69,42 @@ export type Database = {
       }
       orders: {
         Row: {
+          before_count: number | null
           created_at: string
+          current_count: number | null
           id: string
           link: string
           quantity: number
           service_id: string
+          start_time: string | null
           status: string
           total_amount: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          before_count?: number | null
           created_at?: string
+          current_count?: number | null
           id?: string
           link: string
           quantity: number
           service_id: string
+          start_time?: string | null
           status?: string
           total_amount: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          before_count?: number | null
           created_at?: string
+          current_count?: number | null
           id?: string
           link?: string
           quantity?: number
           service_id?: string
+          start_time?: string | null
           status?: string
           total_amount?: number
           updated_at?: string

@@ -23,11 +23,14 @@ import {
   AlertCircle,
   RefreshCw,
   Send,
-  Eye
+  Eye,
+  Gift,
+  Sparkles
 } from "lucide-react";
 import DepositModal from "@/components/DepositModal";
 import OrderModal from "@/components/OrderModal";
 import SupportTicketModal from "@/components/SupportTicketModal";
+import santaImage from "@/assets/santa-christmas.jpg";
 
 interface Order {
   id: string;
@@ -37,6 +40,9 @@ interface Order {
   total_amount: number;
   status: string;
   created_at: string;
+  start_time: string | null;
+  before_count: number | null;
+  current_count: number | null;
   services: {
     name: string;
   };
@@ -476,6 +482,39 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* Christmas Promotion Banner */}
+        <Card className="mb-8 bg-gradient-to-r from-red-50 to-green-50 dark:from-red-950/20 dark:to-green-950/20 border-2 border-red-200 dark:border-red-800 overflow-hidden relative">
+          <div className="absolute top-0 right-0 animate-bounce">
+            <Gift className="h-16 w-16 text-red-500 opacity-20" />
+          </div>
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="relative">
+                <img src={santaImage} alt="Santa Christmas" className="w-32 h-32 md:w-40 md:h-40 object-contain animate-pulse" />
+                <Sparkles className="absolute -top-2 -right-2 h-8 w-8 text-yellow-500 animate-spin" />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="text-2xl md:text-3xl font-bold text-red-600 dark:text-red-400 mb-2 flex items-center justify-center md:justify-start gap-2">
+                  <Gift className="h-6 w-6" />
+                  Christmas Special Offer! 
+                  <Gift className="h-6 w-6" />
+                </h3>
+                <p className="text-lg md:text-xl font-semibold text-green-700 dark:text-green-400 mb-2">
+                  Get 50% BONUS on deposits over $50!
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Limited time offer! Deposit $50 or more and receive an extra 50% bonus added to your account. 
+                  Perfect time to stock up for your growth needs! 🎄✨
+                </p>
+                <Button onClick={() => setShowDepositModal(true)} size="lg" className="bg-red-600 hover:bg-red-700 text-white">
+                  <Gift className="mr-2 h-5 w-5" />
+                  Claim Your Bonus Now
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Action Buttons */}
         <div className="flex gap-4 mb-8">
           <Button onClick={() => setShowDepositModal(true)} className="flex-1">
@@ -516,19 +555,59 @@ const Dashboard = () => {
                 ) : (
                   <div className="space-y-4">
                     {orders.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium">{order.services.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {order.quantity} units • {order.link}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(order.created_at).toLocaleDateString()}
-                          </p>
+                      <div key={order.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <p className="font-medium text-lg">{order.services.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Order ID: {order.id.slice(0, 8)}...
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-lg">${order.total_amount}</p>
+                            {getStatusBadge(order.status)}
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">${order.total_amount}</p>
-                          {getStatusBadge(order.status)}
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-3 border-t border-b">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Link</p>
+                            <p className="text-sm font-medium truncate">{order.link}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Quantity</p>
+                            <p className="text-sm font-medium">{order.quantity} units</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Before Count</p>
+                            <p className="text-sm font-medium">
+                              {order.before_count !== null ? order.before_count.toLocaleString() : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Current Count</p>
+                            <p className="text-sm font-medium">
+                              {order.current_count !== null ? order.current_count.toLocaleString() : 'N/A'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mt-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Order Date</p>
+                            <p className="text-sm font-medium">
+                              {new Date(order.created_at).toLocaleDateString()} at {new Date(order.created_at).toLocaleTimeString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground mb-1">Start Time</p>
+                            <p className="text-sm font-medium">
+                              {order.start_time 
+                                ? `${new Date(order.start_time).toLocaleDateString()} at ${new Date(order.start_time).toLocaleTimeString()}`
+                                : 'Not started yet'
+                              }
+                            </p>
+                          </div>
                         </div>
                       </div>
                     ))}

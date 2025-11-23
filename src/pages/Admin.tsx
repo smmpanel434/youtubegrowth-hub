@@ -39,6 +39,9 @@ interface Order {
   link: string;
   status: string;
   created_at: string;
+  start_time: string | null;
+  before_count: number | null;
+  current_count: number | null;
   profiles: {
     email: string;
     full_name: string;
@@ -94,10 +97,15 @@ const Admin = () => {
   const [ticketReplies, setTicketReplies] = useState<Record<string, TicketReply[]>>({});
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [replyMessage, setReplyMessage] = useState("");
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [newBalance, setNewBalance] = useState("");
+  const [orderStartTime, setOrderStartTime] = useState("");
+  const [orderBeforeCount, setOrderBeforeCount] = useState("");
+  const [orderCurrentCount, setOrderCurrentCount] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -542,6 +550,73 @@ const Admin = () => {
     setIsUserDialogOpen(true);
   };
 
+  const openOrderDialog = (order: Order) => {
+    setSelectedOrder(order);
+    setOrderStartTime(order.start_time || "");
+    setOrderBeforeCount(order.before_count?.toString() || "");
+    setOrderCurrentCount(order.current_count?.toString() || "");
+    setIsOrderDialogOpen(true);
+  };
+
+  const handleUpdateOrderTracking = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      const updates: any = {};
+      
+      if (orderStartTime) {
+        updates.start_time = orderStartTime;
+      }
+      
+      if (orderBeforeCount) {
+        const beforeCount = parseInt(orderBeforeCount);
+        if (isNaN(beforeCount) || beforeCount < 0) {
+          toast({
+            title: "Invalid before count",
+            description: "Please enter a valid positive number",
+            variant: "destructive"
+          });
+          return;
+        }
+        updates.before_count = beforeCount;
+      }
+      
+      if (orderCurrentCount) {
+        const currentCount = parseInt(orderCurrentCount);
+        if (isNaN(currentCount) || currentCount < 0) {
+          toast({
+            title: "Invalid current count",
+            description: "Please enter a valid positive number",
+            variant: "destructive"
+          });
+          return;
+        }
+        updates.current_count = currentCount;
+      }
+
+      const { error } = await supabase
+        .from('orders')
+        .update(updates)
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Order updated",
+        description: "Order tracking details updated successfully"
+      });
+
+      setIsOrderDialogOpen(false);
+      fetchData(); // Refresh orders list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleLogout = () => {
     navigate("/");
   };
@@ -760,35 +835,70 @@ const Admin = () => {
               <CardContent>
                 <div className="space-y-4">
                   {orders.map((order) => (
-                    <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{order.profiles?.full_name || order.profiles?.email}</span>
-                          {getStatusBadge(order.status)}
+                    <div key={order.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{order.profiles?.full_name || order.profiles?.email}</span>
+                            {getStatusBadge(order.status)}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {order.services?.name} • {order.quantity} units • ${order.total_amount}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {order.link}
+                          </p>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {order.services?.name} • {order.quantity} units • ${order.total_amount}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {order.link} • {new Date(order.created_at).toLocaleDateString()}
-                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openOrderDialog(order)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Edit Details
+                          </Button>
+                          <Select
+                            value={order.status}
+                            onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
+                          >
+                            <SelectTrigger className="w-32 bg-card border">
+                              <SelectValue placeholder={order.status} />
+                            </SelectTrigger>
+                            <SelectContent className="bg-card border shadow-lg z-50">
+                              <SelectItem value="pending" className="cursor-pointer">Pending</SelectItem>
+                              <SelectItem value="in progress" className="cursor-pointer">In Progress</SelectItem>
+                              <SelectItem value="active" className="cursor-pointer">Active</SelectItem>
+                              <SelectItem value="completed" className="cursor-pointer">Completed</SelectItem>
+                              <SelectItem value="cancelled" className="cursor-pointer">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Select
-                          value={order.status}
-                          onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
-                        >
-                          <SelectTrigger className="w-32 bg-card border">
-                            <SelectValue placeholder={order.status} />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border shadow-lg z-50">
-                            <SelectItem value="pending" className="cursor-pointer">Pending</SelectItem>
-                            <SelectItem value="in progress" className="cursor-pointer">In Progress</SelectItem>
-                            <SelectItem value="active" className="cursor-pointer">Active</SelectItem>
-                            <SelectItem value="completed" className="cursor-pointer">Completed</SelectItem>
-                            <SelectItem value="cancelled" className="cursor-pointer">Cancelled</SelectItem>
-                          </SelectContent>
-                        </Select>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Order Date</p>
+                          <p className="font-medium">{new Date(order.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Start Time</p>
+                          <p className="font-medium">
+                            {order.start_time ? new Date(order.start_time).toLocaleDateString() : 'Not started'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Before Count</p>
+                          <p className="font-medium">
+                            {order.before_count !== null ? order.before_count.toLocaleString() : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Current Count</p>
+                          <p className="font-medium">
+                            {order.current_count !== null ? order.current_count.toLocaleString() : 'N/A'}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -801,6 +911,88 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Order Tracking Edit Dialog */}
+            <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Update Order Tracking Details</DialogTitle>
+                </DialogHeader>
+                
+                {selectedOrder && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Customer</p>
+                        <p className="font-medium">{selectedOrder.profiles?.full_name || selectedOrder.profiles?.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Service</p>
+                        <p className="font-medium">{selectedOrder.services?.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Quantity</p>
+                        <p className="font-medium">{selectedOrder.quantity} units</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Amount</p>
+                        <p className="font-medium">${selectedOrder.total_amount}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-sm text-muted-foreground">Link</p>
+                        <p className="font-medium text-sm truncate">{selectedOrder.link}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Start Time</label>
+                        <Input
+                          type="datetime-local"
+                          value={orderStartTime}
+                          onChange={(e) => setOrderStartTime(e.target.value)}
+                          placeholder="When did the order processing start?"
+                        />
+                        <p className="text-xs text-muted-foreground">Set when order processing begins</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Before Count</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={orderBeforeCount}
+                          onChange={(e) => setOrderBeforeCount(e.target.value)}
+                          placeholder="Enter initial count (e.g., views, likes)"
+                        />
+                        <p className="text-xs text-muted-foreground">The count before order started (e.g., initial view count)</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Current Count</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          value={orderCurrentCount}
+                          onChange={(e) => setOrderCurrentCount(e.target.value)}
+                          placeholder="Enter current count"
+                        />
+                        <p className="text-xs text-muted-foreground">The current count (updates as order progresses)</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="outline" onClick={() => setIsOrderDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleUpdateOrderTracking}>
+                        Update Tracking Details
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="tickets" className="space-y-4">
